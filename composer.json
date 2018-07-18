@@ -1,0 +1,48 @@
+{
+    "name": "liqueurdetoile/cakephp-orm-json",
+    "description": "Cakephp plugin to provide easy control over JSON type fields in database",
+    "type": "cakephp-plugin",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Liqueur de Toile",
+            "homepage": "https://liqueurdetoile.com"
+        }
+    ],
+    "keywords": [
+      "database",
+      "orm",
+      "json",
+      "json_extract",
+      "mysql",
+      "behavior",
+      "table",
+      "entity",
+      "trait"
+    ],
+    "require": {
+        "php": "^7.1",
+        "cakephp/cakephp": "^3.5",
+        "adbario/php-dot-notation": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.7.14|^6.0",
+        "phpunit/php-code-coverage": "5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lqdt\\Coj\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lqdt\\Coj\\Test\\": "tests/",
+            "Cake\\Test\\": "vendor/cakephp/cakephp/tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "doc": "php phpDocumentor.phar -d ./src -t ./docs"
+    }
+}
