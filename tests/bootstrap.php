@@ -7,7 +7,8 @@
  * installed as a dependency of an application.
  */
 $dsn = env('TRAVIS', false) ?
-  'mysql://root:datpassword@localhost/cakeormjson_test' :
+  //'mysql://root:datpassword@localhost/cakeormjson_test' :
+  'mysql://root@localhost/cakeormjson_test' :
   'mysql://root@localhost/cakeormjson_test';
 
 putenv('db_dsn=' . $dsn);
