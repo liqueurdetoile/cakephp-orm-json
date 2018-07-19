@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj;
+namespace Lqdt\OrmJson;
 
 use Cake\Core\BasePlugin;
 
