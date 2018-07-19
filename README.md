@@ -7,6 +7,8 @@
 
 # Cake-orm-json plugin
 
+**This branch is for CakePHP 3.5+**
+
 This plugin adds support to perform usual CakePHP ORM operations on JSON types fields.
 
 *Never forget that relational databases **are not primarily designed** to manage non-schemed data and using JSON data fields can issue bad performances.*
@@ -122,10 +124,10 @@ All existent query options will be cloned into the new `JsonQuery`.
 // In your controller
 $query = $this->User
   ->find('json')
-  ->jsonselect([
+  ->jsonSelect([
     'prefs.theme@attributes'
   ])
-  ->jsonwhere([
+  ->jsonWhere([
     'username@attributes' => 'user'
   ])
   ->all();
@@ -150,7 +152,7 @@ When using `jsonWhere`, you can any of regular nesting and operator provided as 
 // In your controller
 $query = $this->User
   ->find('json')
-  ->jsonwhere([
+  ->jsonWhere([
     'OR' => [
       'username@attributes =' => 'user'
       'prefs.color@attributes LIKE' => '%dark%'
@@ -159,7 +161,7 @@ $query = $this->User
 
   $query = $this->User
     ->find('json')
-    ->jsonwhere("username@attributes = 'user' OR prefs.color@attributes LIKE '\"%dark\"'")
+    ->jsonWhere("username@attributes = 'user' OR prefs.color@attributes LIKE '\"%dark\"'")
 ```
 When using array form, string values will be escaped through PDO prepared query.
 
@@ -169,7 +171,7 @@ If you're in need, a `JsonQuery` also expose a `jsonExpression` mthod that will 
 
 ### Use JSON specific methods in entities
 When trait is used in an entity, you can use :
-- `Entity::jsonGet` to fetch a value inside JSON data
+- `Entity::jsonGet` to fetch a value inside JSON data. It will return an object by default. You can get an associative array by providing true as second parameter.
 - `Entity::jsonSet` to set a value inside JSON data. Method is chainable or accepts array
 - `Entity::jsonIsset` to check if a key is defined inside JSON data
 - `Entity::jsonUnset` to delete a key inside JSON data. Method is chainable or accepts array
@@ -183,12 +185,21 @@ $username = $user->jsonGet('username@attributes');
 $user
   ->jsonSet('prefs.theme@attributes', 'notSoLovely')
   ->jsonSet([
-    'metas.blue' => 'sea',
-    'metas.red' => 'apple'
+    'metas.blue@attributes' => 'sea',
+    'metas.red@attributes' => 'apple'
   ]);
 ```
 
-### API reference (incomplete)
+If providing only field name string to `jsonGet`, the whole data is returned as an object/array. This way, you can easily fetch field properties like this :
+```php
+// In your controller
+$user = $this->Users->get(1);
+$username = $user->jsonGet('attributes')->username;
+// or with associative array parameter set to true
+$username = $user->jsonGet('attributes', true)['username'];
+```
+
+### API reference
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog

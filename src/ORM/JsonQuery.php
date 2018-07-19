@@ -6,6 +6,7 @@ use Cake\Database\Expression\QueryExpression;
 use Cake\Core\Exception\Exception;
 use Cake\Database\Connection;
 use Cake\ORM\Table;
+use Cake\Database\Schema\TableSchema;
 
 /**
  * Extends the core Query class to provide support for parsing
@@ -16,8 +17,17 @@ use Cake\ORM\Table;
  * @license MIT
  * @author Liqueur de Toile <contact@liqueurdetoile.com>
  */
+
 class JsonQuery extends Query
 {
+    /**
+     * Constructor
+     * @version 1.0.0
+     * @since   1.0.0
+     * @param   Connection  $connection  Connection to use
+     * @param   Table       $table       Table to use     *
+     * @param   Query       $parentQuery Initial Query object
+     */
     public function __construct(Connection $connection, Table $table, Query $parentQuery = null)
     {
         parent::__construct($connection, $table);
@@ -34,10 +44,9 @@ class JsonQuery extends Query
      * Convert a property name given under datfield format
      * into a valid JSON_EXTRACT short notation usable in cakePHP standard queries
      *
-     * @method  jsonFieldName
      * @version 1.0.0
      * @since   1.0.0
-     * @param   String      $field Input field name
+     * @param   String      $datfield     Input field name
      * @return  String      Returns Mysql valid formatted name to query JSON
      */
     public function jsonFieldName(string $datfield) : string
@@ -54,7 +63,6 @@ class JsonQuery extends Query
      * The regexp is a bit tricky to avoid collision with mail parameter value
      * that will be enclosed by quotes
      *
-     * @method  jsonFieldsNameInString
      * @version 1.0.0
      * @since   1.0.0
      * @param   string             $conditions String to be reworked
@@ -80,7 +88,6 @@ class JsonQuery extends Query
      * Parse a statement with JSON_EXTRACT short notation. It will convert
      * usual operators to fit a mysql JSON field search
      *
-     * @method  jsonStatement
      * @version 1.0.0
      * @since   1.0.0
      * @param   string       $field  Field call
@@ -132,23 +139,26 @@ class JsonQuery extends Query
      * The returned property name will be aliased by replacing `@` and `.` with
      * `_` bye default to avoid errors. Custom separator string can be provided
      *
-     * @method  jsonselect
      * @version 1.0.0
      * @since   1.0.0
      * @param   string|array     $fields     Field name in datfield notation
      * @param   string           $separator  Separator sting for field aliases name (dot is not allowed)
-     * @return  jsonQuery                    Self for chaining
+     * @return  JsonQuery                    Self for chaining
      */
-    public function jsonselect($fields, string $separator = '_') : jsonQuery
+    public function jsonSelect($fields, string $separator = '_') : self
     {
         $jsonfields = [];
         $fields = (array) $fields;
+        $types = $this->getSelectTypeMap()->getTypes();
+
         foreach ($fields as $field) {
             $parts = explode('@', $field);
             $key = str_replace('.', $separator, $parts[1] . '.' . $parts[0]);
             $jsonfields[$key] = $this->jsonFieldName($field);
+            $types[$key] = 'json';
         }
 
+        $this->getSelectTypeMap()->setTypes($types);
         $this->select($jsonfields);
         return $this;
     }
@@ -159,7 +169,6 @@ class JsonQuery extends Query
      * The conditions are evaluated with jsonStatement to fit
      * JSON search compatibility
      *
-     * @method  jsonExpression
      * @version 1.0.0
      * @since   1.0.0
      * @param   array|string    $conditions Conditions for WHERE clause
@@ -206,8 +215,16 @@ class JsonQuery extends Query
         return $exp;
     }
 
-    public function jsonwhere($conditions)
+    /**
+     * Where clause builder
+     * @version 1.0.0
+     * @since   1.0.0
+     * @param   string|array    $conditions Conditions for WHERE clause
+     * @return  JsonQuery                   Self dor chaining
+     */
+    public function jsonWhere($conditions) : self
     {
+        $conditions = (array) $conditions;
         $this->where($this->jsonExpression($conditions));
         return $this;
     }

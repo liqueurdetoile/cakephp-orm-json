@@ -10,6 +10,7 @@ env:
 language: php
 php:
   - 7.1
+  - 7.2
 
 services:
   - mysql
@@ -42,6 +43,7 @@ before_script:
 # Testing the app (see phpunit.xml) for configs, generating Code Coverage report
 script:
   - ./vendor/bin/phpunit --coverage-clover coverage/clover.xml
+  - composer phpstan
 
 after_success:
 # Submit coverage report to Coveralls servers, see .coveralls.yml

@@ -40,9 +40,9 @@ class UsersFixture extends TestFixture
             [
                 'id' => '1',
                 'attributes' => [
-                  "username" => "test1",
-                  "email" => "test1@liqueurdetoile.com",
-                  "string" => "string1",
+                  "username" => 'test1',
+                  "email" => 'test1@liqueurdetoile.com',
+                  "string" => 'string1',
                   "integer" => 10,
                   "boolean" => true,
                   "null" => null,

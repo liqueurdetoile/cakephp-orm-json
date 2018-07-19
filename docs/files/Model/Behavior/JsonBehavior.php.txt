@@ -23,6 +23,13 @@ use Lqdt\OrmJson\ORM\JsonQuery;
  */
 class JsonBehavior extends Behavior
 {
+    /**
+     * Create a JsonQuery from existing Gquery object or from scratch
+     * @version 1.0.0
+     * @since   1.0..
+     * @param   Query    $parentQuery  Existing query
+     * @return  JsonQuery              JsonQuery instance
+     */
     public function jsonQuery(Query $parentQuery = null) : JsonQuery
     {
         $table =  $this->getTable();
@@ -33,7 +40,6 @@ class JsonBehavior extends Behavior
      * Custom finder Model::find('json') that lets use JSON inner field key selector
      * and JSON inner field key/value set for WHERE clause
      *
-     * @method  findJson
      * @version 1.0.0
      * @since   1.0.0
      * @param   Query     $query   CakePHP Query Object

@@ -57,11 +57,55 @@ class JsonTraitTest extends TestCase
         ], class_uses($this->user));
     }
 
-    public function test_jsonGet()
+    public function testjsonGetAsObject()
+    {
+        $attributes = $this->user->jsonGet('attributes');
+
+        $this->assertEquals(
+          [
+              'string1',
+              10,
+              true,
+              null,
+              1.2,
+              ['a','b'],
+              'deepkey1'
+          ],
+          [
+              $attributes->string,
+              $attributes->integer,
+              $attributes->boolean,
+              $attributes->null,
+              $attributes->decimal,
+              $attributes->array,
+              $attributes->deep->key,
+          ]
+        );
+    }
+
+    public function testjsonGetAsArray()
     {
         $this->assertEquals(
-          'test1',
-          $this->user->jsonGet('username@attributes')
+          [
+              'string1',
+              10,
+              true,
+              null,
+              1.2,
+              ['a','b'],
+              ['a' => 'a', 'b' => 'b'],
+              'deepkey1'
+          ],
+          [
+              $this->user->jsonGet('string@attributes', true),
+              $this->user->jsonGet('integer@attributes', true),
+              $this->user->jsonGet('boolean@attributes', true),
+              $this->user->jsonGet('null@attributes', true),
+              $this->user->jsonGet('decimal@attributes', true),
+              $this->user->jsonGet('array@attributes', true),
+              $this->user->jsonGet('object@attributes', true),
+              $this->user->jsonGet('deep.key@attributes', true),
+          ]
         );
     }
 
@@ -70,13 +114,28 @@ class JsonTraitTest extends TestCase
         $this->user->jsonSet('blap@attributes', 'blap');
         $this->assertEquals(
           'blap',
-          $this->user->jsonGet('blap@attributes')
+          $this->user->jsonGet('blap@attributes', true)
         );
         $this->Users->save($this->user);
         $testSave = $this->Users->find('json')->first();
         $this->assertEquals(
           'blap',
-          $testSave->jsonGet('blap@attributes')
+          $testSave->jsonGet('blap@attributes', true)
+        );
+    }
+
+    public function test_jsonSetWithNull()
+    {
+        $this->user->jsonSet('blap@attributes', null);
+        $this->assertEquals(
+          null,
+          $this->user->jsonGet('blap@attributes', true)
+        );
+        $this->Users->save($this->user);
+        $testSave = $this->Users->find('json')->first();
+        $this->assertEquals(
+          null,
+          $testSave->jsonGet('blap@attributes', true)
         );
     }
 
@@ -89,12 +148,12 @@ class JsonTraitTest extends TestCase
 
         $this->assertEquals(
           'blap',
-          $this->user->jsonGet('blap@attributes')
+          $this->user->jsonGet('blap@attributes', true)
         );
 
         $this->assertEquals(
           'blap',
-          $this->user->jsonGet('string@attributes')
+          $this->user->jsonGet('string@attributes', true)
         );
     }
 
@@ -107,7 +166,7 @@ class JsonTraitTest extends TestCase
 
         $this->assertEquals(
           false,
-          $this->user->jsonGet('blap@attributes')
+          $this->user->jsonGet('blap@attributes', true)
         );
     }
 
@@ -115,12 +174,12 @@ class JsonTraitTest extends TestCase
     {
         $this->assertEquals(
           true,
-          $this->user->jsonIsset('deep.key@attributes')
+          $this->user->jsonIsset('deep.key@attributes', true)
         );
 
         $this->assertEquals(
           true,
-          $this->user->jsonGet('decimal@attributes')
+          $this->user->jsonGet('decimal@attributes', true)
         );
 
         $this->user->jsonUnset([
@@ -135,7 +194,7 @@ class JsonTraitTest extends TestCase
 
         $this->assertEquals(
           false,
-          $this->user->jsonGet('decimal@attributes')
+          $this->user->jsonGet('decimal@attributes', true)
         );
     }
 }
