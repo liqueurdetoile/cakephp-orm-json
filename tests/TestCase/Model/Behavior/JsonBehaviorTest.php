@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj\Test\TestCase\Model\Behavior;
+namespace Lqdt\OrmJson\Test\TestCase\Model\Behavior;
 
 use Cake\TestSuite\TestCase;
 use Cake\ORM\TableRegistry;
@@ -10,7 +10,7 @@ use Cake\ORM\TableRegistry;
 class JsonBehaviorTest extends TestCase
 {
     public $Users; // Mock up model
-    public $fixtures = ['Lqdt\Coj\Test\Fixture\UsersFixture'];
+    public $fixtures = ['Lqdt\OrmJson\Test\Fixture\UsersFixture'];
 
     /**
      * setUp method
@@ -21,7 +21,7 @@ class JsonBehaviorTest extends TestCase
     {
         parent::setUp();
         $this->Users = TableRegistry::get('Users');
-        $this->Users->addBehavior('Lqdt\Coj\Model\Behavior\JsonBehavior');
+        $this->Users->addBehavior('Lqdt\OrmJson\Model\Behavior\JsonBehavior');
     }
 
     /**
@@ -40,9 +40,9 @@ class JsonBehaviorTest extends TestCase
     public function testQueryConstructor()
     {
         $query = $this->Users->jsonQuery();
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $query = $this->Users->find('json');
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
     }
 
     public function testSelectInOptions()
@@ -51,7 +51,7 @@ class JsonBehaviorTest extends TestCase
           'json.fields' => 'username@attributes'
         ]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
 
         $this->assertEquals([
@@ -73,7 +73,7 @@ class JsonBehaviorTest extends TestCase
           ->find('json')
           ->jsonselect('deep.key@Users.attributes', '-');
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
 
         $this->assertEquals([
@@ -96,7 +96,7 @@ class JsonBehaviorTest extends TestCase
           'json.conditions' => ['username@attributes' => 'test1']
         ]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -110,7 +110,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['username@attributes' => 'test1']);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -124,7 +124,7 @@ class JsonBehaviorTest extends TestCase
         ->select('id')
         ->jsonwhere(['deep.key@attributes' => 'deepkey1']);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -138,7 +138,7 @@ class JsonBehaviorTest extends TestCase
         ->select('id')
         ->jsonwhere(['email@attributes' => 'test1@liqueurdetoile.com']);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -152,7 +152,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['username@attributes LIKE' => '%1']);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -166,7 +166,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['integer@attributes' => 10]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -180,7 +180,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['decimal@attributes' => 1.2]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -194,7 +194,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['float@attributes' => 12e+14]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 3]
@@ -208,7 +208,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['boolean@attributes' => true]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -222,7 +222,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['null@attributes' => null]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -236,7 +236,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['array@attributes' => ['a','b']]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -250,7 +250,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['object@attributes' => ['a'=>'a','b'=>'b']]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -269,7 +269,7 @@ class JsonBehaviorTest extends TestCase
             ]
           ]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -288,7 +288,7 @@ class JsonBehaviorTest extends TestCase
             ]
           ]);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 2],
@@ -303,7 +303,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere('username@attributes NOT IN (\'"test2"\', \'"test3"\')');
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 1]
@@ -317,7 +317,7 @@ class JsonBehaviorTest extends TestCase
           ->select('id')
           ->jsonwhere(['not' => 'username@attributes NOT IN (\'"test2"\', \'"test3"\')']);
 
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals([
           ['id' => 2],

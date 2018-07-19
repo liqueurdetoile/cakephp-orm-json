@@ -32,12 +32,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Lqdt\\Coj\\": "src/"
+            "Lqdt\\OrmJson\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Lqdt\\Coj\\Test\\": "tests/",
+            "Lqdt\\OrmJson\\Test\\": "tests/",
             "Cake\\Test\\": "vendor/cakephp/cakephp/tests/"
         }
     },

@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj\Test\Fixture;
+namespace Lqdt\OrmJson\Test\Fixture;
 
 use Cake\TestSuite\Fixture\TestFixture;
 

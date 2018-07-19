@@ -1,9 +1,9 @@
 <?php
-namespace Lqdt\Coj\Model\Behavior;
+namespace Lqdt\OrmJson\Model\Behavior;
 
 use Cake\ORM\Behavior;
 use Cake\ORM\Query;
-use Lqdt\Coj\ORM\JsonQuery;
+use Lqdt\OrmJson\ORM\JsonQuery;
 
 /**
  * This CakePHP behavior adds support to performs mysql queries into JSON fields

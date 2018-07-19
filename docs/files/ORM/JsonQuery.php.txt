@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj\ORM;
+namespace Lqdt\OrmJson\ORM;
 
 use Cake\ORM\Query;
 use Cake\Database\Expression\QueryExpression;

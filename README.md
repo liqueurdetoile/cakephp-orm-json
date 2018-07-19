@@ -35,9 +35,9 @@ You can install this plugin into your CakePHP application using [composer](http:
 composer require liqueurdetoile/cakephp-orm-json
 ```
 
-The base namespace of the plugin is `lqdt\Coj`.
+The base namespace of the plugin is `Lqdt\OrmJson`.
 
-### Loading plugin `Lqdt/Coj`
+### Loading plugin `Lqdt/OrmJson`
 Go to [CakePHP 3.x reference for loading plugin](https://book.cakephp.org/3.0/en/plugins.html#loading-a-plugin)
 
 You can then add `JsonBehavior` to tables and/or `JsonTrait` to entities.
@@ -67,7 +67,7 @@ See [CakePHP 3.x reference for traits](https://book.cakephp.org/3.0/en/orm/entit
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
-use Lqdt\Coj\Model\Entity\JsonTrait;
+use Lqdt\OrmJson\Model\Entity\JsonTrait;
 
 class User extends Entity
 {
@@ -193,9 +193,9 @@ See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
 **v1.0.0**
-- Add `lqdt\Coj\ORM\JsonQuery` to support basic formatting of fields names and conditions
-- Add `lqdt\Coj\Model\Behavior\JsonBehavior` to enhance tables with JSON cool stuff
-- Add `lqdt\Coj\Model\Entity\JsonTrait` to enhance entities with JSON cool stuff
+- Add `Lqdt\OrmJson\ORM\JsonQuery` to support basic formatting of fields names and conditions
+- Add `Lqdt\OrmJson\Model\Behavior\JsonBehavior` to enhance tables with JSON cool stuff
+- Add `Lqdt\OrmJson\Model\Entity\JsonTrait` to enhance entities with JSON cool stuff
 - Only supports `Mysql`
 
 ## Todo

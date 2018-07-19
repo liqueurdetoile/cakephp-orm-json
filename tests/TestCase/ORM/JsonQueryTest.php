@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj\Test\TestCase\ORM;
+namespace Lqdt\OrmJson\Test\TestCase\ORM;
 
 use Cake\TestSuite\TestCase;
 use Cake\ORM\TableRegistry;
@@ -7,7 +7,7 @@ use Cake\ORM\TableRegistry;
 class JsonQueryTest extends TestCase
 {
     public $Users; // Mock up model
-    public $fixtures = ['Lqdt\Coj\Test\Fixture\UsersFixture'];
+    public $fixtures = ['Lqdt\OrmJson\Test\Fixture\UsersFixture'];
 
     /**
      * setUp method
@@ -18,7 +18,7 @@ class JsonQueryTest extends TestCase
     {
         parent::setUp();
         $this->Users = TableRegistry::get('Users');
-        $this->Users->addBehavior('Lqdt\Coj\Model\Behavior\JsonBehavior');
+        $this->Users->addBehavior('Lqdt\OrmJson\Model\Behavior\JsonBehavior');
     }
 
     /**
@@ -37,7 +37,7 @@ class JsonQueryTest extends TestCase
     public function testConstructor()
     {
         $query = $this->Users->jsonQuery();
-        $this->assertInstanceOf('Lqdt\Coj\ORM\JsonQuery', $query);
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
     }
 
     public function testJsonFieldName()

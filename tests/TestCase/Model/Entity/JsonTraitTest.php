@@ -1,11 +1,11 @@
 <?php
-namespace Lqdt\Coj\Test\TestCase\Model\Entity;
+namespace Lqdt\OrmJson\Test\TestCase\Model\Entity;
 
 use Cake\TestSuite\TestCase;
 use Cake\ORM\TableRegistry;
 use Cake\ORM\Entity;
 use Cake\Datasource\EntityTrait;
-use Lqdt\Coj\Model\Entity\JsonTrait;
+use Lqdt\OrmJson\Model\Entity\JsonTrait;
 
 class User extends Entity
 {
@@ -17,7 +17,7 @@ class JsonTraitTest extends TestCase
 {
     public $user; // Mock up entity
     public $Users; // Mock up model
-    public $fixtures = ['Lqdt\Coj\Test\Fixture\UsersFixture'];
+    public $fixtures = ['Lqdt\OrmJson\Test\Fixture\UsersFixture'];
 
     /**
      * setUp method
@@ -28,8 +28,8 @@ class JsonTraitTest extends TestCase
     {
         parent::setUp();
         $users = TableRegistry::get('Users');
-        $users->addBehavior('Lqdt\Coj\Model\Behavior\JsonBehavior');
-        $users->setEntityClass('Lqdt\Coj\Test\TestCase\Model\Entity\User');
+        $users->addBehavior('Lqdt\OrmJson\Model\Behavior\JsonBehavior');
+        $users->setEntityClass('Lqdt\OrmJson\Test\TestCase\Model\Entity\User');
         $this->user = $users->find('json')->first();
         $this->Users = $users;
     }
@@ -52,7 +52,7 @@ class JsonTraitTest extends TestCase
         $this->assertInstanceOf('Cake\ORM\Entity', $this->user);
         $this->assertEquals(1, $this->user->id);
         $this->assertEquals([
-          'Lqdt\Coj\Model\Entity\JsonTrait' => 'Lqdt\Coj\Model\Entity\JsonTrait',
+          'Lqdt\OrmJson\Model\Entity\JsonTrait' => 'Lqdt\OrmJson\Model\Entity\JsonTrait',
           'Cake\Datasource\EntityTrait' => 'Cake\Datasource\EntityTrait'
         ], class_uses($this->user));
     }

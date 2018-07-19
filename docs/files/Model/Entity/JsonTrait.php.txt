@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\Coj\Model\Entity;
+namespace Lqdt\OrmJson\Model\Entity;
 
 use Adbar\Dot;
 
