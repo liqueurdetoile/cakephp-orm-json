@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/liqueurdetoile/cakephp-orm-json.svg?branch=master)](https://travis-ci.org/liqueurdetoile/cakephp-orm-json)
+[![Coverage Status](https://coveralls.io/repos/github/liqueurdetoile/cakephp-orm-json/badge.svg?branch=master)](https://coveralls.io/github/liqueurdetoile/cakephp-orm-json?branch=master)
+
 # Cake-orm-json plugin
 
 This plugin adds support to perform usual ORM operations on JSON types fields. **It's still WIP**.
