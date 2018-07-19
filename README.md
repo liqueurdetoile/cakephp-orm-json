@@ -54,7 +54,7 @@ class UsersTable extends Table
 {
     public function initialize(array $config)
     {
-        $this->addBehavior('Lqdt/Coj.json');
+        $this->addBehavior('Lqdt/OrmJson.json');
         // [...]
     }
 }
