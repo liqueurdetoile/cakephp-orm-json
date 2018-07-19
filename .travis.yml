@@ -1,6 +1,12 @@
 dist: trusty
 sudo: required
 
+env:
+  global:
+    - CI_BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
+    - CI_PULL_REQUEST=$TRAVIS_PULL_REQUEST
+    - CI_BRANCH=$TRAVIS_BRANCH
+
 language: php
 php:
   - 7.1
