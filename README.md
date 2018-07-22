@@ -85,7 +85,7 @@ This plugin introduces the `datfield` format (contraction of `dot` and `at field
 Path represents the properties way inside Model JSON field. For instance :
 ```
 Model = Users
-Field = attributes
+Field = id INT PRIMARY KEY, attributes JSON
 attributes field content = {
   username: 'user',
   prefs: {
