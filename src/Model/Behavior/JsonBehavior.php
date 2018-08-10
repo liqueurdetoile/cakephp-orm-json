@@ -1,6 +1,15 @@
 <?php
+/**
+ * JSON behavior for cakePHP framework
+ * @license MIT
+ * @author  Liqueur de Toile <contact@liqueurdetoile.com>
+ */
 namespace Lqdt\OrmJson\Model\Behavior;
 
+use Adbar\Dot;
+use ArrayObject;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\Event;
 use Cake\ORM\Behavior;
 use Cake\ORM\Query;
 use Lqdt\OrmJson\ORM\JsonQuery;
@@ -16,7 +25,7 @@ use Lqdt\OrmJson\ORM\JsonQuery;
  * JSON field name must be called in specific format like this : <tt>path@[Model.]field</tt> and they will be turned
  * into JSON_EXTRACT short notation like <tt>[Model.]fieldname->"$.path"</tt>
  *
- * @version 1.0.0
+ * @version 1.1.0
  * @since   1.0.0
  * @license MIT
  * @author  Liqueur de Toile <contact@liqueurdetoile.com>
@@ -66,5 +75,39 @@ class JsonBehavior extends Behavior
         }
 
         return $query;
+    }
+
+    /**
+     * Parse datfield from raw data used in newEntity or PatchEntity methods into nested array values
+     *
+     * When using patchEntity, a call to jsonMerge must be done to merge old and new values or
+     * new data will replace all previous ones.
+     *
+     * @version 1.0.0
+     * @since   1.1.0
+     * @param   Event         $event   Event
+     * @param   ArrayObject   $data    Data
+     * @param   ArrayObject   $options Options
+     * @return  void
+     * @see \Lqdt\OrmJson\Model\Entity\JsonTrait::jsonMerge()
+     */
+    public function beforeMarshal(Event $event, ArrayObject $data, ArrayObject $options) : void
+    {
+        $dot = new Dot();
+        $map = $data->getArrayCopy();
+
+        foreach ($map as $field => $value) {
+            // Convert datfield and parse dotfield
+            if (false !== strpos($field, '@')) {
+                $parts = explode('@', $field);
+                $dot->set($parts[1] . '.' . $parts[0], $value);
+                $data->offsetUnset($field);
+            }
+        }
+
+        $dot = $dot->all();
+        foreach ($dot as $field => $value) {
+            $data[$field] = $value;
+        }
     }
 }

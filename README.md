@@ -115,14 +115,14 @@ You can late bind a previous `Query` to a `JsonQuery` like this :
 ```php
 // In your controller
 $query = $this->Users->find('stuff');
-$jsonquery = $this->Users->jsonQuery($query);
+$query = $this->Users->jsonQuery($query);
 ```
 All existent query options will be cloned into the new `JsonQuery`.
 
 `JsonQuery` extends core `Query` and all core methods are available, plus two specific json chainable functions.
 ```php
 // In your controller
-$query = $this->User
+$query = $this->Users
   ->find('json')
   ->jsonSelect([
     'prefs.theme@attributes'
@@ -136,7 +136,7 @@ $query = $this->User
 Alternatively, you can provide parameters to the `find` query :
 ```php
 // In your controller
-$query = $this->User
+$query = $this->Users
   ->find('json', [
     'json.fields' => ['prefs.theme@attributes'],
     'json.conditions' => ['username@attributes' => 'user'])
@@ -147,10 +147,10 @@ You can use any usual regular options and mix methods with any of the syntaxes.
 
 When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one.
 
-When using `jsonWhere`, you can any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
+When using `jsonWhere`, you can use any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
 ```php
 // In your controller
-$query = $this->User
+$query = $this->Users
   ->find('json')
   ->jsonWhere([
     'OR' => [
@@ -159,7 +159,7 @@ $query = $this->User
     ]
   ]);
 
-  $query = $this->User
+  $query = $this->Users
     ->find('json')
     ->jsonWhere("username@attributes = 'user' OR prefs.color@attributes LIKE '\"%dark\"'")
 ```
@@ -167,9 +167,31 @@ When using array form, string values will be escaped through PDO prepared query.
 
 At this time, you can't use function callbacks to build complex queries.
 
-If you're in need, a `JsonQuery` also expose a `jsonExpression` mthod that will return a core `QueryExpression` that can be latter combined. See API reference for details.
+If you're in need, a `JsonQuery` also expose a `jsonExpression` method that will return a core `QueryExpression` that can be latter combined. See API reference for details.
 
-### Use JSON specific methods in entities
+### Create and update JSON in an entity from model
+Since v1.1.0, fields names are filtered before marshalling when using `Model::newEntity` or `Model::patchEntity`.
+
+When using patchEntity, the whole JSON field will be replaced by new value. If you want to only mass update some properties, you can call `jsonMerge` on returned entity.
+
+```php
+// In your controller
+$user = $this->Users->newEntity([
+  'nickname@attributes' => 'Foo'
+]);
+
+// Replace field value by {"update":"Bar"}
+$user = $this->Users->patchEntity([
+  'update@attributes' => 'Bar'
+]);
+
+// Update/create attributes field value
+$user = $this->Users->patchEntity([
+  'update@attributes' => 'Bar'
+])->jsonMerge();
+```
+
+### Use JSON setter/getter methods with entities
 When trait is used in an entity, you can use :
 - `Entity::jsonGet` to fetch a value inside JSON data. It will return an object by default. You can get an associative array by providing true as second parameter.
 - `Entity::jsonSet` to set a value inside JSON data. Method is chainable or accepts array
@@ -190,19 +212,20 @@ $user
   ]);
 ```
 
-If providing only field name string to `jsonGet`, the whole data is returned as an object/array. This way, you can easily fetch field properties like this :
+If providing only field name string to `jsonGet`, the whole data is returned as an object. This way, you can easily fetch field properties like this :
 ```php
 // In your controller
 $user = $this->Users->get(1);
 $username = $user->jsonGet('attributes')->username;
-// or with associative array parameter set to true
-$username = $user->jsonGet('attributes', true)['username'];
 ```
 
 ### API reference
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
+**v1.1.0**
+- Add support for `newEntity` and `patchEntity` through a `beforeMarshal` event and `jsonmerge`
+
 **v1.0.0**
 - Add `Lqdt\OrmJson\ORM\JsonQuery` to support basic formatting of fields names and conditions
 - Add `Lqdt\OrmJson\Model\Behavior\JsonBehavior` to enhance tables with JSON cool stuff
