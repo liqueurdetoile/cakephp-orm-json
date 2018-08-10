@@ -1,11 +1,16 @@
 <?php
+/**
+ * JSON trait for cakePHP framework
+ * @license MIT
+ * @author  Liqueur de Toile <contact@liqueurdetoile.com>
+ */
 namespace Lqdt\OrmJson\Model\Entity;
 
 use Adbar\Dot;
 
 /**
  * This trait adds useful methods to get and set values in JSON fields
- * @version 1.0.0
+ * @version 1.1.0
  * @since   1.0.0
  * @license MIT
  * @author  Liqueur de Toile <contact@liqueurdetoile.com>
@@ -115,7 +120,7 @@ trait JsonTrait
      * @version 1.0.0
      * @since   1.0.0
      * @param   string|array     $datfield Datfield
-     * @return  self                       [description]
+     * @return  self
      */
     public function jsonUnset($datfield) : self
     {
@@ -129,6 +134,24 @@ trait JsonTrait
         $this->_parse($datfield);
         $this->_data->delete($this->_path);
         $this->set($this->_field, $this->_data->all());
+        return $this;
+    }
+
+    /**
+     * Merge new json values into fields when called after patchEntity
+     * @version 1.0.0
+     * @since   1.1.0
+     * @return  self
+     */
+    public function jsonMerge() : self
+    {
+        if (!empty($original = $this->getOriginalValues())) {
+            foreach ($original as $field => $value) {
+                if (is_array($value)) {
+                    $this->$field = array_merge($value, $this->$field);
+                }
+            }
+        }
         return $this;
     }
 }
