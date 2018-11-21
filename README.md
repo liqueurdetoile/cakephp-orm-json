@@ -143,9 +143,13 @@ $query = $this->Users
   ->all();
 ```
 
+Aliases are fully supported in the same manner as CakePHP does through associative array.
+
 You can use any usual regular options and mix methods with any of the syntaxes.
 
 When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one.
+
+**At this time, dots are not supported as a valid separator.**
 
 When using `jsonWhere`, you can use any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
 ```php
@@ -165,7 +169,7 @@ $query = $this->Users
 ```
 When using array form, string values will be escaped through PDO prepared query.
 
-At this time, you can't use function callbacks to build complex queries.
+**At this time, you can't use function callbacks to build complex queries.**
 
 If you're in need, a `JsonQuery` also expose a `jsonExpression` method that will return a core `QueryExpression` that can be latter combined. See API reference for details.
 
@@ -223,6 +227,8 @@ $username = $user->jsonGet('attributes')->username;
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
+**v1.1.0**
+- Add support for aliases in `jsonSelect` through associative arrays
 **v1.1.0**
 - Add support for `newEntity` and `patchEntity` through a `beforeMarshal` event and `jsonmerge`
 

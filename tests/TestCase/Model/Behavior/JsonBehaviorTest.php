@@ -118,19 +118,6 @@ class JsonBehaviorTest extends TestCase
         $this->assertEquals(['deepkey'=>'deepkey1'], $result);
     }
 
-    /** @group current */
-    public function testSelectDottedAliases()
-    {
-        $query = $this->Users
-          ->find('json')
-          ->jsonSelect(['`deep.key`' => 'deep.key@Users.attributes']);
-
-        debug($query->sql());
-        $result = $query->enableHydration(false)->first();
-        debug($result);
-        $this->assertEquals(['deepkey'=>'deepkey1'], $result);
-    }
-
     public function testWhereInOptions()
     {
         $query = $this->Users->find('json', [

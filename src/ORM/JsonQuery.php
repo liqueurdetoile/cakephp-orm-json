@@ -220,7 +220,7 @@ class JsonQuery extends Query
      * @version 1.0.0
      * @since   1.0.0
      * @param   string|array    $conditions Conditions for WHERE clause
-     * @return  JsonQuery                   Self dor chaining
+     * @return  JsonQuery                   Self for chaining
      */
     public function jsonWhere($conditions) : self
     {
