@@ -25,7 +25,7 @@ use Lqdt\OrmJson\ORM\JsonQuery;
  * JSON field name must be called in specific format like this : <tt>path@[Model.]field</tt> and they will be turned
  * into JSON_EXTRACT short notation like <tt>[Model.]fieldname->"$.path"</tt>
  *
- * @version 1.0.0
+ * @version 1.1.0
  * @since   1.0.0
  * @license MIT
  * @author  Liqueur de Toile <contact@liqueurdetoile.com>
@@ -65,13 +65,18 @@ class JsonBehavior extends Behavior
         $query = $this->jsonQuery($query);
 
         if (!empty($options['json.fields'])) {
-            $query->jsonselect((array) $options['json.fields']);
+            $query->jsonSelect((array) $options['json.fields']);
             unset($options['json.fields']);
         }
 
         if (!empty($options['json.conditions'])) {
-            $query->jsonwhere((array) $options['json.conditions']);
+            $query->jsonWhere((array) $options['json.conditions']);
             unset($options['json.conditions']);
+        }
+
+        if (!empty($options['json.sort'])) {
+            $query->jsonOrder((array) $options['json.sort']);
+            unset($options['json.sort']);
         }
 
         return $query;
@@ -81,7 +86,7 @@ class JsonBehavior extends Behavior
      * Parse datfield from raw data used in newEntity or PatchEntity methods into nested array values
      *
      * When using patchEntity, a call to jsonMerge must be done to merge old and new values or
-     * new data will replace all previous ones.
+     * new data will simply replaces previous one in the JSON field.
      *
      * @version 1.0.0
      * @since   1.1.0

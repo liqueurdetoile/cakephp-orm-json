@@ -15,7 +15,7 @@ This plugin adds support to perform usual CakePHP ORM operations on JSON types f
 
 However, there is always some cases where JSON fields are handy, especially with EAV data model and this plugin can ease the pain to use them with CakePHP.
 
-**Caution : It only works with Mysql databases by now.**
+**Caution : It only works with Mysql databases > 5.7 (supporting JSON tpe field) by now.**
 
 This plugin brings :
 - JsonBehavior behavior for models
@@ -27,6 +27,27 @@ Provided behavior and query are relying on [Mysql JSON_EXTRACT function](https:/
 Provided trait provides functions to quick get/set values in JSON data.
 
 Both are based on a [specific custom notation](#Datfield-format-explanation).
+
+<!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+- [Installation](#installation)
+	- [Install plugin](#install-plugin)
+	- [Loading plugin `Lqdt/OrmJson`](#loading-plugin-lqdtormjson)
+	- [Add JSON behavior to tables](#add-json-behavior-to-tables)
+	- [Add JSON Trait](#add-json-trait)
+- [Usage](#usage)
+	- [Datfield format explanation](#datfield-format-explanation)
+	- [Performs finds in JSON data](#performs-finds-in-json-data)
+		- [Selecting datfields](#selecting-datfields)
+		- [filtering datfields](#filtering-datfields)
+		- [Sorting datfields](#sorting-datfields)
+	- [Create and update JSON in an entity from model](#create-and-update-json-in-an-entity-from-model)
+	- [Use JSON setter/getter methods with entities](#use-json-settergetter-methods-with-entities)
+	- [API reference](#api-reference)
+- [Changelog](#changelog)
+- [Disclaimer](#disclaimer)
+
+<!-- /TOC -->
 
 ## Installation
 
@@ -82,16 +103,21 @@ class User extends Entity
 ### Datfield format explanation
 This plugin introduces the `datfield` format (contraction of `dot` and `at field`) like this : <tt>path@[Model.]field</tt> and can be used in any Json specific functions brought by behavior and trait in the same way fields are used in regular core data functions.
 
-Path represents the properties way inside Model JSON field. For instance :
+Path represents the properties way inside Model JSON field. For instance, with this schema :
 ```
 Model = Users
 Field = id INT PRIMARY KEY, attributes JSON
+
 attributes field content = {
-  username: 'user',
-  prefs: {
-    theme: 'lovely',
-    color: 'dark'
-  }
+  "username": "user",
+  "prefs": {
+    "theme": "lovely",
+    "color": "dark"
+  },
+  logs: [
+    "log0",
+    "log1"
+  ]
 }
 
 username@attributes will yield 'user'
@@ -101,7 +127,7 @@ prefs.theme@attributes will yield 'lovely'
 ```
 When querying, this notation is automatically converted to JSON_EXTRACT short notation `field->"$.path"`.
 
-Please note that queries can't be filtered by now on JSON array indexes (like logs.0 inside the previous example).
+Please note that queries can't be filtered by now on JSON array indexes (like kinda logs.0 inside the previous example).
 
 ### Performs finds in JSON data
 When the JsonBehavior is added to a table, you can get a `JsonQuery` instance like this :
@@ -119,7 +145,7 @@ $query = $this->Users->jsonQuery($query);
 ```
 All existent query options will be cloned into the new `JsonQuery`.
 
-`JsonQuery` extends core `Query` and all core methods are available, plus two specific json chainable functions.
+`JsonQuery` extends core `Query` and all core methods are available, plus three specific json chainable functions.
 ```php
 // In your controller
 $query = $this->Users
@@ -130,6 +156,9 @@ $query = $this->Users
   ->jsonWhere([
     'username@attributes' => 'user'
   ])
+  ->jsonOrder([
+    'created@attributes' => 'DESC'
+  ])
   ->all();
 ```
 
@@ -139,9 +168,14 @@ Alternatively, you can provide parameters to the `find` query :
 $query = $this->Users
   ->find('json', [
     'json.fields' => ['prefs.theme@attributes'],
-    'json.conditions' => ['username@attributes' => 'user'])
+    'json.conditions' => ['username@attributes' => 'user']),
+    'json.sort' => ['created@attributes' => 'DESC']
   ->all();
 ```
+#### Selecting datfields
+It works exactly in the same manner than the `fields` option or the `select` method.
+
+** Note: you can mix "regular" fields from table with JSON field internal data when using `json.fields` or `jsonSelect`. **
 
 Aliases are fully supported in the same manner as CakePHP does through associative array.
 
@@ -149,9 +183,13 @@ You can use any usual regular options and mix methods with any of the syntaxes.
 
 When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one.
 
-**At this time, dots are not supported as a valid separator.**
+** Especially, you can safely use a dot as a separator or in your aliases. It's useful when speaking in JSON data in an API to avoid transforming keys. **
 
+#### filtering datfields
 When using `jsonWhere`, you can use any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
+
+** Note: you can mix "regular" fields from table with JSON field internal data when using `json.conditions` or `jsonWhere`. **
+
 ```php
 // In your controller
 $query = $this->Users
@@ -172,6 +210,11 @@ When using array form, string values will be escaped through PDO prepared query.
 **At this time, you can't use function callbacks to build complex queries.**
 
 If you're in need, a `JsonQuery` also expose a `jsonExpression` method that will return a core `QueryExpression` that can be latter combined. See API reference for details.
+
+#### Sorting datfields
+It's exactly the same syntax than `order`|`sort` option or `order` method. If the provided parameter is a string, it will be treated as a default ASC ordering on this field. If the provided parameter is an array of strings, default ASC ordering will also be applied.
+
+** Note: you can mix "regular" fields from table with JSON field internal data when using `json.sort` or `jsonOrder`. **
 
 ### Create and update JSON in an entity from model
 Since v1.1.0, fields names are filtered before marshalling when using `Model::newEntity` or `Model::patchEntity`.
@@ -227,6 +270,11 @@ $username = $user->jsonGet('attributes')->username;
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
+**v1.3.0**
+- Add support for dot seperator and dotted aliases in select operations
+- Add support for sorting on datfield value
+- Add support to accept regular database fields into json specific select, where and order statements
+
 **v1.2.0**
 - Add support for aliases in `jsonSelect` and `json.fields` option through associative arrays
 
@@ -239,12 +287,10 @@ See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 - Add `Lqdt\OrmJson\Model\Entity\JsonTrait` to enhance entities with JSON cool stuff
 - Only supports `Mysql`
 
-## Todo
+## Disclaimer
 By this time, the plugin only translates datfield notation to a suitable format to perform Mysql queries using CakePHP ORM.
 
-The Mysql way of querying cannot be used *as is* in other RDMS.
+The Mysql way of querying cannot be used *as is* in other RDBMS.
 However, the logic can be ported to other systems, especially those working with TEXT.
 
 This plugin exclusively relies on Mysql JSON_EXTRACT to perform finds. Other JSON functions are not implemented but can be useful (see [Mysql reference](https://dev.mysql.com/doc/refman/8.0/en/json-functions.html)).
-
-Finally support for accessing array values by index may also be added.

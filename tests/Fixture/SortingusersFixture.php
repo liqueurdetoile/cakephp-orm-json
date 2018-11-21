@@ -6,7 +6,7 @@ use Cake\TestSuite\Fixture\TestFixture;
 /**
  * UsersFixture
  */
-class UsersFixture extends TestFixture
+class SortingusersFixture extends TestFixture
 {
     public $connection = 'test';
     public $table = 'users';
@@ -40,50 +40,45 @@ class UsersFixture extends TestFixture
             [
                 'id' => '1',
                 'attributes' => [
-                  "username" => 'test1',
-                  "email" => 'test1@liqueurdetoile.com',
-                  'group' => 1,
-                  "string" => 'string1',
+                  "string" => 'mid',
+                  "same" => "a",
                   "integer" => 10,
                   "boolean" => true,
-                  "null" => null,
-                  "decimal" => 1.2,
+                  "decimal" => 2.4,
                   "float" => 1.2E+5,
-                  "array" => [
-                    'a',
-                    'b'
-                  ],
-                  "object" => [
-                    'a' => 'a',
-                    'b' => 'b'
-                  ],
+                  "maybeNull" => "notnull",
                   "deep" => [
-                      "key" => "deepkey1"
+                      "key" => "mid"
                   ]
                 ]
             ],
             [
                 'id' => '2',
                 'attributes' => [
-                  "username" => "test2",
-                  "email" => "test2@liqueurdetoile.com",
-                  'group' => 1,
-                  "string" => "astring2",
-                  "integer" => 100,
-                  "boolean" => false
+                  "string" => 'xbottom',
+                  "same" => "a",
+                  "integer" => 50,
+                  "boolean" => true,
+                  "decimal" => 3.6,
+                  "float" => 1.2E+10,
+                  "maybeNull" => "xnotnull",
+                  "deep" => [
+                      "key" => "xbottom"
+                  ]
                 ]
             ],
             [
                 'id' => '3',
                 'attributes' => [
-                  "username" => "test3",
-                  'group' => 2,
-                  "email" => "test3@liqueurdetoile.com",
+                  "string" => 'atop',
+                  "same" => "b",
+                  "integer" => 1,
                   "boolean" => false,
-                  "null" => false,
-                  "float" => 1.2E+15,
+                  "decimal" => 1.2,
+                  "float" => 1.2E+2,
+                  "maybeNull" => null,
                   "deep" => [
-                      "key" => "deepkey2"
+                      "key" => "atop"
                   ]
                 ]
             ]

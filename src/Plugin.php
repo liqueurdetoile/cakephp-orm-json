@@ -1,4 +1,7 @@
 <?php
+/**
+ * Plugin
+ */
 namespace Lqdt\OrmJson;
 
 use Cake\Core\BasePlugin;

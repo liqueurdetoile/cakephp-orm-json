@@ -5,6 +5,8 @@ use Cake\ORM\Query;
 use Cake\Database\Expression\QueryExpression;
 use Cake\Core\Exception\Exception;
 use Cake\Database\Connection;
+use Cake\Datasource\ResultSetDecorator;
+use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Table;
 use Cake\Database\Schema\TableSchema;
 
@@ -21,6 +23,18 @@ use Cake\Database\Schema\TableSchema;
 class JsonQuery extends Query
 {
     /**
+     * Stores the use of dots in fields names when selecting
+     * @var boolean
+     */
+    protected $_isDotted = false;
+
+    /**
+     * Stores the use of sorting on JSON fields values
+     * @var boolean
+     */
+    protected $_isJsonSorted = false;
+
+    /**
      * Constructor
      * @version 1.0.0
      * @since   1.0.0
@@ -31,13 +45,26 @@ class JsonQuery extends Query
     public function __construct(Connection $connection, Table $table, Query $parentQuery = null)
     {
         parent::__construct($connection, $table);
-        // Copy properties of parent in current query
+
+        // Copy properties of previous query in current query
         if (!empty($parentQuery)) {
             $props = get_object_vars($parentQuery);
             foreach ($props as $key=>$value) {
                 $this->$key = $value;
             }
         }
+    }
+
+    /**
+     * Utility function to check if a field is datfield
+     * @version 1.0.0
+     * @since   1.3.0
+     * @param   string    $field Field name
+     * @return  boolean
+     */
+    public function isDatField($field)
+    {
+        return false !== strpos($field, '@');
     }
 
     /**
@@ -136,10 +163,10 @@ class JsonQuery extends Query
     /**
      * Adds support to fetch selected properties within a JSON field
      *
-     * The returned property name will be aliased by replacing `@` and `.` with
-     * `_` bye default to avoid errors. Custom separator string can be provided
+     * Aliases fields are now supported as well as the use of a dot as separator or in alias for the
+     * resulting field name
      *
-     * @version 1.0.0
+     * @version 1.2.0
      * @since   1.0.0
      * @param   string|array     $fields     Field name in datfield notation
      * @param   string           $separator  Separator sting for field aliases name (dot is not allowed)
@@ -147,19 +174,35 @@ class JsonQuery extends Query
      */
     public function jsonSelect($fields, string $separator = '_') : self
     {
-        $jsonfields = [];
         $fields = (array) $fields;
         $types = $this->getSelectTypeMap()->getTypes();
 
-        foreach ($fields as $field) {
+        foreach ($fields as $alias => $field) {
+            // regular field
+            if (!$this->isDatField($field)) {
+                $this->select([$alias => $field]);
+                continue;
+            }
+
             $parts = explode('@', $field);
-            $key = str_replace('.', $separator, $parts[1] . '.' . $parts[0]);
-            $jsonfields[$key] = $this->jsonFieldName($field);
+
+            if ($separator === '.' || false !== strpos($alias, '.')) {
+                $this->_isDotted = true;
+                // escape dots to avoid failure when executing query
+                $separator = '\.';
+            }
+
+            $key = str_replace(
+              '.',
+              $separator,
+              is_int($alias) ? $parts[1] . '.' . $parts[0] : $alias
+            );
+
+            $this->select([$key => $this->jsonFieldName($field)]);
             $types[$key] = 'json';
         }
 
         $this->getSelectTypeMap()->setTypes($types);
-        $this->select($jsonfields);
         return $this;
     }
 
@@ -220,13 +263,162 @@ class JsonQuery extends Query
      * @version 1.0.0
      * @since   1.0.0
      * @param   string|array    $conditions Conditions for WHERE clause
-     * @return  JsonQuery                   Self dor chaining
+     * @return  JsonQuery                   Self for chaining
      */
     public function jsonWhere($conditions) : self
     {
         $conditions = (array) $conditions;
         $this->where($this->jsonExpression($conditions));
         return $this;
+    }
+
+    /**
+     * Parse sort options to fit `[["fieldname" => "direction"]]` pattern
+     *
+     * @version 1.0.0
+     * @since   1.3.0
+     * @param   string|array    $conditions Sort conditions
+     * @return  array           Parsed conditions
+     */
+    public function parseSortConditions($conditions) : array
+    {
+        if (is_string($conditions)) {
+            $conditions = [
+            $conditions => 'ASC'
+          ];
+        } else {
+            foreach ($conditions as $key => $value) {
+                if (is_int($key)) {
+                    $conditions[$value] = 'ASC';
+                    unset($conditions[$key]);
+                }
+            }
+        }
+        return $conditions;
+    }
+
+    /**
+     * Intercepts calls to clause('select') to enable or disable autofields
+     *
+     * When sorting, we must select custom fields to sort and thus disable autofields
+     * even if no selection have been made. This wrapper prevents this behavior
+     *
+     * @inheritdoc
+     *
+     * @version 1.0.0
+     * @since   1.3.0
+     * @param   string    $name Clause name
+     * @return  array           Array of clause
+     */
+    public function clause($name)
+    {
+        if ($name === 'select') {
+            $selectedFields = parent::clause($name);
+            foreach ($selectedFields as $alias => $field) {
+                // Remove "fake" json fields used for sorting
+                if (false !== strpos($alias, '__orderingSelectedField__')) {
+                    unset($selectedFields[$alias]);
+                }
+            }
+            // Enable/disable autofields based on remaining selected fields presence
+            $this->enableAutoFields(empty($selectedFields));
+        }
+
+        return parent::clause($name);
+    }
+
+
+    /**
+     * Sets up the sorting based on JSON fields value
+     *
+     * @version 1.0.0
+     * @since   1.3.0
+     * @param   string|array    $conditions Sorting conditions
+     * @return  JsonQuery       self for chaining
+     */
+    public function jsonOrder($conditions) : self
+    {
+        $conditions = $this->parseSortConditions($conditions);
+
+        $fields = array_keys($conditions);
+        $types = $this->getSelectTypeMap()->getTypes();
+
+        foreach ($fields as $field) {
+            // Regular field
+            if (!$this->isDatField($field)) {
+                $this->order([$field => $conditions[$field]]);
+                continue;
+            }
+
+            $parts = explode('@', $field);
+            $key = '__orderingSelectedField__' . str_replace('.', '_', $parts[1] . '.' . $parts[0]);
+            $this->order([$key => $conditions[$field]]);
+            $this->select([$key => $this->jsonFieldName($field)]);
+            $types[$key] = 'json';
+            $this->_isJsonSorted = true;
+        }
+
+        $this->getSelectTypeMap()->setTypes($types);
+        return $this;
+    }
+
+    /**
+     * Wrapper for the genuine `\Cake\ORM\Query::all` method to allow dot in field names
+     * and sorting
+     *
+     * When extracting data, it unescapes dotted field names and clean
+     * json fields used for sorting and not requested
+     *
+     * @version 1.0.0
+     * @since   1.3.0
+     * @return  ResultSetInterface    Result set to iterate on
+     */
+    public function all() : ResultSetInterface
+    {
+        if (!$this->_isDotted && !$this->_isJsonSorted) {
+            return parent::all();
+        }
+
+        // restoring dot separator
+        $resultSet = parent::all();
+
+        // Entities case
+        if ($this->_hydrate) {
+            $entities = [];
+
+            foreach ($resultSet as $result) {
+                $properties = $result->toArray();
+                foreach ($properties as $fieldname => $value) {
+                    // Remove "fake" json fields used for sorting
+                    if (false !== strpos($fieldname, '__orderingSelectedField__')) {
+                        $result->unsetProperty($fieldname);
+                    } elseif (false !== strpos($fieldname, '\.')) {
+                        $result->unsetProperty($fieldname);
+                        $result->set(str_replace('\.', '.', $fieldname), $value);
+                    }
+                }
+                $result->clean();
+                $entities[] = $result;
+            }
+
+            return new ResultSetDecorator($entities);
+        }
+
+        // Array case
+        $results = [];
+
+        foreach ($resultSet as $result) {
+            $data = [];
+            foreach ($result as $fieldname => $value) {
+                // Remove "fake" json fields used for sorting
+                if (false === strpos($fieldname, '__orderingSelectedField__')) {
+                    $data[str_replace('\.', '.', $fieldname)] = $value;
+                }
+            }
+            $results[] = $data;
+        }
+
+        return new ResultSetDecorator($results);
     }
 }
 

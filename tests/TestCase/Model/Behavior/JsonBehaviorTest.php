@@ -118,6 +118,64 @@ class JsonBehaviorTest extends TestCase
         $this->assertEquals(['deepkey'=>'deepkey1'], $result);
     }
 
+    public function testSelectMixingFieldsAndDatfields()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['id', 'deep.key@users.attributes']);
+
+        $result = $query->first()->toArray();
+        $this->assertEquals(['id'=>1,'users_attributes_deep_key'=>'deepkey1'], $result);
+    }
+
+    public function testSelectWithDotAsSeparatorAndEntities()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['deep.key@users.attributes'], '.');
+
+        $result = $query->first()->toArray();
+        $this->assertEquals(['users.attributes.deep.key'=>'deepkey1'], $result);
+    }
+
+    public function testSelectWithDottedAliases()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['deep.key' => 'deep.key@Users.attributes']);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals(['deep.key'=>'deepkey1'], $result);
+    }
+
+    public function testSelectWithDotAsSeparatorAndArrayOfEntities()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['deep.key@attributes'], '.');
+
+        $result = $query->toArray();
+        $this->assertEquals(true, is_array($result));
+        $this->assertEquals('deepkey1', $result[0]->get('attributes.deep.key'));
+        $this->assertEquals(null, $result[1]->get('attributes.deep.key'));
+        $this->assertEquals('deepkey2', $result[2]->get('attributes.deep.key'));
+    }
+
+    public function testSelectWithDotAsSeparatorAndHydrationDisabled()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['deep.key@users.attributes'], '.');
+
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals('deepkey1', $result[0]['users.attributes.deep.key']);
+        $this->assertEquals(null, $result[1]['users.attributes.deep.key']);
+        $this->assertEquals('deepkey2', $result[2]['users.attributes.deep.key']);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals(['users.attributes.deep.key'=>'deepkey1'], $result);
+    }
+
     public function testWhereInOptions()
     {
         $query = $this->Users->find('json', [
@@ -194,6 +252,20 @@ class JsonBehaviorTest extends TestCase
           ->find('json')
           ->select('id')
           ->jsonWhere(['integer@attributes' => 10]);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
+    public function testWhereIntegerWithComparison()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(['integer@attributes <' => 100]);
 
         $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
@@ -354,6 +426,23 @@ class JsonBehaviorTest extends TestCase
         ], $result);
     }
 
+    public function testWhereWithMixedFields()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere([
+            'id >' => 1,
+            'group@attributes' => 1
+          ]);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 2]
+        ], $result);
+    }
+
     public function testMarshalWithNewEntityAndDatField()
     {
         $user = $this->Users->newEntity([
@@ -405,7 +494,8 @@ class JsonBehaviorTest extends TestCase
           'test' => 'test',
           'nested' => [
               'test' => 'deep'
-          ]
+          ],
+          'group' => 2
         ], $user->attributes);
     }
 }
