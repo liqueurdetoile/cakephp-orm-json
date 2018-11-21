@@ -227,8 +227,9 @@ $username = $user->jsonGet('attributes')->username;
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
-**v1.1.0**
-- Add support for aliases in `jsonSelect` through associative arrays
+**v1.2.0**
+- Add support for aliases in `jsonSelect` and `json.fields` option through associative arrays
+-
 **v1.1.0**
 - Add support for `newEntity` and `patchEntity` through a `beforeMarshal` event and `jsonmerge`
 
