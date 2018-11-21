@@ -108,6 +108,29 @@ class JsonBehaviorTest extends TestCase
         ], $result);
     }
 
+    public function testSelectWithAliases()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['deepkey' => 'deep.key@Users.attributes']);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals(['deepkey'=>'deepkey1'], $result);
+    }
+
+    /** @group current */
+    public function testSelectDottedAliases()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->jsonSelect(['`deep.key`' => 'deep.key@Users.attributes']);
+
+        debug($query->sql());
+        $result = $query->enableHydration(false)->first();
+        debug($result);
+        $this->assertEquals(['deepkey'=>'deepkey1'], $result);
+    }
+
     public function testWhereInOptions()
     {
         $query = $this->Users->find('json', [

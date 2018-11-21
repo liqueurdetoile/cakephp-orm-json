@@ -137,7 +137,7 @@ class JsonQuery extends Query
      * Adds support to fetch selected properties within a JSON field
      *
      * The returned property name will be aliased by replacing `@` and `.` with
-     * `_` bye default to avoid errors. Custom separator string can be provided
+     * `_` by default to avoid errors. Custom separator string can be provided
      *
      * @version 1.0.0
      * @since   1.0.0
@@ -151,9 +151,9 @@ class JsonQuery extends Query
         $fields = (array) $fields;
         $types = $this->getSelectTypeMap()->getTypes();
 
-        foreach ($fields as $field) {
+        foreach ($fields as $alias => $field) {
             $parts = explode('@', $field);
-            $key = str_replace('.', $separator, $parts[1] . '.' . $parts[0]);
+            $key = is_int($alias) ? str_replace('.', $separator, $parts[1] . '.' . $parts[0]) : $alias;
             $jsonfields[$key] = $this->jsonFieldName($field);
             $types[$key] = 'json';
         }
