@@ -144,46 +144,46 @@
                                 <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-131067937"></a>
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1134444692"></a>
                                 <a href="../namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
             </div>
-            <div id="namespace-131067937" class="accordion-body collapse in">
+            <div id="namespace-1134444692" class="accordion-body collapse in">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1249558684"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1881213578"></a>
                                 <a href="../namespaces/Lqdt.html" style="margin-left: 30px; padding-left: 0">Lqdt</a>
             </div>
-            <div id="namespace-1249558684" class="accordion-body collapse ">
+            <div id="namespace-1881213578" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1417190352"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1349182136"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.html" style="margin-left: 30px; padding-left: 0">OrmJson</a>
             </div>
-            <div id="namespace-1417190352" class="accordion-body collapse ">
+            <div id="namespace-1349182136" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1109897784"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-2046989726"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.html" style="margin-left: 30px; padding-left: 0">Model</a>
             </div>
-            <div id="namespace-1109897784" class="accordion-body collapse ">
+            <div id="namespace-2046989726" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1164355988"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1437425889"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.Behavior.html" style="margin-left: 30px; padding-left: 0">Behavior</a>
             </div>
-            <div id="namespace-1164355988" class="accordion-body collapse ">
+            <div id="namespace-1437425889" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -198,10 +198,10 @@
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-393068550"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-2120390091"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.Entity.html" style="margin-left: 30px; padding-left: 0">Entity</a>
             </div>
-            <div id="namespace-393068550" class="accordion-body collapse ">
+            <div id="namespace-2120390091" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -224,10 +224,10 @@
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1905282991"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1401898929"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.ORM.html" style="margin-left: 30px; padding-left: 0">ORM</a>
             </div>
-            <div id="namespace-1905282991" class="accordion-body collapse ">
+            <div id="namespace-1401898929" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -743,7 +743,7 @@ usual operators to fit a mysql JSON field search</em></p>
             <article class="method">
                 <h3 class="public ">jsonSelect()</h3>
                 <a href="#source-view" role="button" class="pull-right btn" data-toggle="modal" style="font-size: 1.1em; padding: 9px 14px"><i class="icon-code"></i></a>
-                <pre class="signature" style="margin-right: 54px;">jsonSelect(string|array  <span class="argument">$fields</span>, string  <span class="argument">$separator = &#039;_&#039;</span>) : \Lqdt\OrmJson\ORM\JsonQuery</pre>
+                <pre class="signature" style="margin-right: 54px;">jsonSelect(string|array  <span class="argument">$fields</span>, string  <span class="argument">$separator = &#039;_&#039;</span>, boolean  <span class="argument">$lowercasedKey = false</span>) : \Lqdt\OrmJson\ORM\JsonQuery</pre>
                 <p><em>Adds support to fetch selected properties within a JSON field</em></p>
                 <p>Aliases fields are now supported as well as the use of a dot as separator or in alias for the
 resulting field name</p>
@@ -759,6 +759,11 @@ resulting field name</p>
                                 <td>string</td>
                                 <td>$separator </td>
                                 <td><p>Separator sting for field aliases name (dot is not allowed)</p></td>
+                            </tr>
+                                                    <tr>
+                                <td>boolean</td>
+                                <td>$lowercasedKey </td>
+                                <td><p>Force key alias to be lowercased (useful when using models name in datfield that must be capitalized)</p></td>
                             </tr>
                                             </table>
                 
@@ -1172,7 +1177,7 @@ json fields used for sorting and not requested</p>
                 <section class="span10 offset1">
                     <hr />
                     Documentation is powered by <a href="http://www.phpdoc.org/">phpDocumentor </a> and authored
-                    on November 21st, 2018 at 13:25.
+                    on November 21st, 2018 at 13:57.
                 </section>
             </section>
         </section>

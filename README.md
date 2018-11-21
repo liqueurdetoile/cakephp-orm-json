@@ -15,7 +15,7 @@ This plugin adds support to perform usual CakePHP ORM operations on JSON types f
 
 However, there is always some cases where JSON fields are handy, especially with EAV data model and this plugin can ease the pain to use them with CakePHP.
 
-**Caution : It only works with Mysql databases > 5.7 (supporting JSON tpe field) by now.**
+**Caution : It only works with Mysql databases > 5.7 (supporting JSON type field) by now.**
 
 This plugin brings :
 - JsonBehavior behavior for models
@@ -181,7 +181,7 @@ Aliases are fully supported in the same manner as CakePHP does through associati
 
 You can use any usual regular options and mix methods with any of the syntaxes.
 
-When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one.
+When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one. A third boolean parameter can be used to force lowercasing of the key when set to `true`.
 
 ** Especially, you can safely use a dot as a separator or in your aliases. It's useful when speaking in JSON data in an API to avoid transforming keys. **
 

@@ -122,7 +122,7 @@ class JsonBehaviorTest extends TestCase
     {
         $query = $this->Users
         ->find('json')
-        ->jsonSelect(['id', 'deep.key@users.attributes']);
+        ->jsonSelect(['id', 'deep.key@Users.attributes'], '_', true);
 
         $result = $query->first()->toArray();
         $this->assertEquals(['id'=>1,'users_attributes_deep_key'=>'deepkey1'], $result);
@@ -132,7 +132,7 @@ class JsonBehaviorTest extends TestCase
     {
         $query = $this->Users
           ->find('json')
-          ->jsonSelect(['deep.key@users.attributes'], '.');
+          ->jsonSelect(['deep.key@Users.attributes'], '.', true);
 
         $result = $query->first()->toArray();
         $this->assertEquals(['users.attributes.deep.key'=>'deepkey1'], $result);
@@ -165,7 +165,7 @@ class JsonBehaviorTest extends TestCase
     {
         $query = $this->Users
           ->find('json')
-          ->jsonSelect(['deep.key@users.attributes'], '.');
+          ->jsonSelect(['deep.key@Users.attributes'], '.', true);
 
         $result = $query->enableHydration(false)->toArray();
         $this->assertEquals('deepkey1', $result[0]['users.attributes.deep.key']);

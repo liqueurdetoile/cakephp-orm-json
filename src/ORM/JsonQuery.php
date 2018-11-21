@@ -168,11 +168,12 @@ class JsonQuery extends Query
      *
      * @version 1.2.0
      * @since   1.0.0
-     * @param   string|array     $fields     Field name in datfield notation
-     * @param   string           $separator  Separator sting for field aliases name (dot is not allowed)
+     * @param   string|array     $fields          Field name in datfield notation
+     * @param   string           $separator       Separator sting for field aliases name (dot is not allowed)
+     * @param   bool             $lowercasedKey   Force key alias to be lowercased (useful when using models name in datfield that must be capitalized)
      * @return  JsonQuery                    Self for chaining
      */
-    public function jsonSelect($fields, string $separator = '_') : self
+    public function jsonSelect($fields, string $separator = '_', bool $lowercasedKey = false) : self
     {
         $fields = (array) $fields;
         $types = $this->getSelectTypeMap()->getTypes();
@@ -198,6 +199,9 @@ class JsonQuery extends Query
               is_int($alias) ? $parts[1] . '.' . $parts[0] : $alias
             );
 
+            if ($lowercasedKey) {
+                $key = strtolower($key);
+            }
             $this->select([$key => $this->jsonFieldName($field)]);
             $types[$key] = 'json';
         }
