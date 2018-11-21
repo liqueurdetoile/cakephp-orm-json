@@ -176,6 +176,37 @@ class JsonBehaviorTest extends TestCase
         $this->assertEquals(['users.attributes.deep.key'=>'deepkey1'], $result);
     }
 
+    public function testSelectWithAssocOnEntities()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['deep.key@Users.attributes'], false, true);
+
+        $result = $query->first();
+        $this->assertEquals('deepkey1', $result->users['attributes']['deep']['key']);
+    }
+
+    public function testSelectWithAssocOnArray()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['deep.key@Users.attributes'], false, true);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals('deepkey1', $result['users']['attributes']['deep']['key']);
+    }
+
+    /** @group current */
+    public function testSelectWithAssocOnDottedAlias()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['my.key' => 'deep.key@Users.attributes'], false);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals('deepkey1', $result['my']['key']);
+    }
+
     public function testWhereInOptions()
     {
         $query = $this->Users->find('json', [

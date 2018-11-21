@@ -175,7 +175,7 @@ $query = $this->Users
 #### Selecting datfields
 It works exactly in the same manner than the `fields` option or the `select` method.
 
-** Note: you can mix "regular" fields from table with JSON field internal data when using `json.fields` or `jsonSelect`. **
+**Note: you can mix "regular" fields from table with JSON field internal data when using `json.fields` or `jsonSelect`.**
 
 Aliases are fully supported in the same manner as CakePHP does through associative array.
 
@@ -183,12 +183,29 @@ You can use any usual regular options and mix methods with any of the syntaxes.
 
 When using `jsonSelect`, returned field name is aliased like this : `[Model_]field_path`. You can provide a string as second parameter to change default `_` one. A third boolean parameter can be used to force lowercasing of the key when set to `true`.
 
-** Especially, you can safely use a dot as a separator or in your aliases. It's useful when speaking in JSON data in an API to avoid transforming keys. **
+By setting separator to `false`, the field key (aliased or not) won't be kept flattened but instead used to rebuild an associative array of data :
+
+```php
+$this->Users->find('json')->jsonSelect('the.deep.key@attributes', '.')->first()->toArray();
+// will return ['attributes.the.deep.key' => 'deepvalue']
+
+// With delimiter set to false
+$this->Users->find('json')->jsonSelect('the.deep.key@attributes', false)->first()->toArray();
+// will return ['attributes' => ['the' => ['deep' => ['key' => 'deepvalue']]]]
+
+// With dotted alias and delimiter set to false
+$this->Users->find('json')->jsonSelect(['my.key' => 'the.deep.key@attributes'], false)->first()->toArray();
+// will return ['my' => ['key' => 'deepvalue']]
+```
+
+- **Note :** As version >= 1.3.0, you can safely use a dot as a separator or in aliases.
+
+- **Note :** As version >= 1.4.0, you can fetch back an associative array to be directly used in JSON data exchange through API
 
 #### filtering datfields
 When using `jsonWhere`, you can use any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
 
-** Note: you can mix "regular" fields from table with JSON field internal data when using `json.conditions` or `jsonWhere`. **
+**Note: you can mix "regular" fields from table with JSON field internal data when using `json.conditions` or `jsonWhere`. **
 
 ```php
 // In your controller
@@ -214,7 +231,7 @@ If you're in need, a `JsonQuery` also expose a `jsonExpression` method that will
 #### Sorting datfields
 It's exactly the same syntax than `order`|`sort` option or `order` method. If the provided parameter is a string, it will be treated as a default ASC ordering on this field. If the provided parameter is an array of strings, default ASC ordering will also be applied.
 
-** Note: you can mix "regular" fields from table with JSON field internal data when using `json.sort` or `jsonOrder`. **
+**Note: you can mix "regular" fields from table with JSON field internal data when using `json.sort` or `jsonOrder`. **
 
 ### Create and update JSON in an entity from model
 Since v1.1.0, fields names are filtered before marshalling when using `Model::newEntity` or `Model::patchEntity`.
@@ -270,6 +287,9 @@ $username = $user->jsonGet('attributes')->username;
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
+**v1.4.0**
+- Add support to optionally fetch back an associative array instead having flattened keys when selecting statements
+
 **v1.3.0**
 - Add support for dot seperator and dotted aliases in select operations
 - Add support for sorting on datfield value

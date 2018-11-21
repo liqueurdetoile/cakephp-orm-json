@@ -1,6 +1,7 @@
 <?php
 namespace Lqdt\OrmJson\ORM;
 
+use Adbar\Dot;
 use Cake\ORM\Query;
 use Cake\Database\Expression\QueryExpression;
 use Cake\Core\Exception\Exception;
@@ -24,15 +25,21 @@ class JsonQuery extends Query
 {
     /**
      * Stores the use of dots in fields names when selecting
-     * @var boolean
+     * @var bool
      */
     protected $_isDotted = false;
 
     /**
      * Stores the use of sorting on JSON fields values
-     * @var boolean
+     * @var bool
      */
     protected $_isJsonSorted = false;
+
+    /**
+     * Stores the request to fetch back selected JSON fields as associative array
+     * @var bool
+     */
+    protected $_isAssoc = false;
 
     /**
      * Constructor
@@ -166,14 +173,14 @@ class JsonQuery extends Query
      * Aliases fields are now supported as well as the use of a dot as separator or in alias for the
      * resulting field name
      *
-     * @version 1.2.0
+     * @version 1.3.0
      * @since   1.0.0
      * @param   string|array     $fields          Field name in datfield notation
-     * @param   string           $separator       Separator sting for field aliases name (dot is not allowed)
+     * @param   string|boolean   $separator       Separator sting for field aliases name (dot is not allowed). Set it to false to return Resultset as associative array
      * @param   bool             $lowercasedKey   Force key alias to be lowercased (useful when using models name in datfield that must be capitalized)
      * @return  JsonQuery                    Self for chaining
      */
-    public function jsonSelect($fields, string $separator = '_', bool $lowercasedKey = false) : self
+    public function jsonSelect($fields, $separator = '_', bool $lowercasedKey = false) : self
     {
         $fields = (array) $fields;
         $types = $this->getSelectTypeMap()->getTypes();
@@ -186,6 +193,12 @@ class JsonQuery extends Query
             }
 
             $parts = explode('@', $field);
+
+            if ($separator === false) {
+                $this->_isAssoc = true;
+                $this->_isDotted = true;
+                $separator = '\.';
+            }
 
             if ($separator === '.' || false !== strpos($alias, '.')) {
                 $this->_isDotted = true;
@@ -373,7 +386,7 @@ class JsonQuery extends Query
      * When extracting data, it unescapes dotted field names and clean
      * json fields used for sorting and not requested
      *
-     * @version 1.0.0
+     * @version 1.1.0
      * @since   1.3.0
      * @return  ResultSetInterface    Result set to iterate on
      */
@@ -398,7 +411,16 @@ class JsonQuery extends Query
                         $result->unsetProperty($fieldname);
                     } elseif (false !== strpos($fieldname, '\.')) {
                         $result->unsetProperty($fieldname);
-                        $result->set(str_replace('\.', '.', $fieldname), $value);
+                        if ($this->_isAssoc) {
+                            $dot = new Dot();
+                            $dot->set(str_replace('\.', '.', $fieldname), $value);
+                            $dot = $dot->all();
+                            $key = array_keys($dot)[0];
+                            $value = $dot[$key];
+                            $result->set($key, $value);
+                        } else {
+                            $result->set(str_replace('\.', '.', $fieldname), $value);
+                        }
                     }
                 }
                 $result->clean();
@@ -416,7 +438,16 @@ class JsonQuery extends Query
             foreach ($result as $fieldname => $value) {
                 // Remove "fake" json fields used for sorting
                 if (false === strpos($fieldname, '__orderingSelectedField__')) {
-                    $data[str_replace('\.', '.', $fieldname)] = $value;
+                    if ($this->_isAssoc) {
+                        $dot = new Dot();
+                        $dot->set(str_replace('\.', '.', $fieldname), $value);
+                        $dot = $dot->all();
+                        $key = array_keys($dot)[0];
+                        $value = $dot[$key];
+                        $data[$key] = $value;
+                    } else {
+                        $data[str_replace('\.', '.', $fieldname)] = $value;
+                    }
                 }
             }
             $results[] = $data;
