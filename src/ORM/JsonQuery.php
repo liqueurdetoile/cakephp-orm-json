@@ -447,7 +447,7 @@ class JsonQuery extends Query
             foreach ($result as $fieldname => $value) {
                 // Remove "fake" json fields used for sorting
                 if (false === strpos($fieldname, '__orderingSelectedField__')) {
-                    if ($this->_isAssoc) {
+                    if ($this->_isAssoc && false !== strpos($fieldname, '\.')) {
                         // Clean fieldname from table alias
                         $fieldname = str_replace($alias . '\.', '', $fieldname);
                         $dot = new Dot();
