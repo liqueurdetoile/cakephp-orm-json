@@ -56,6 +56,7 @@ class JsonBehavior extends Behavior
      *  <tt>$options = [<br>
      *    'json.fields' => (array|string) Fields/key of JSON type<br>
      *    'json.conditions' => (array|string) Conditions to use in WHERE clause<br>
+     *    'json.sort' => (array|string) Condition to use in ORDER BY clause
      *    ...<br>
      *  ]</tt>
      * @return  JsonQuery              Cunstom JsonQuery instance

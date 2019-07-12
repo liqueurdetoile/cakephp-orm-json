@@ -176,7 +176,7 @@ class JsonQuery extends Query
      * @version 1.3.0
      * @since   1.0.0
      * @param   string|array     $fields          Field name in datfield notation
-     * @param   string|boolean   $separator       Separator sting for field aliases name (dot is not allowed). Set it to false to return Resultset as associative array
+     * @param   string|boolean   $separator       Separator string for field aliases name (dot is not allowed). Set it to false to return Resultset as associative array
      * @param   bool             $lowercasedKey   Force key alias to be lowercased (useful when using models name in datfield that must be capitalized)
      * @return  JsonQuery                    Self for chaining
      */
@@ -184,6 +184,13 @@ class JsonQuery extends Query
     {
         $fields = (array) $fields;
         $types = $this->getSelectTypeMap()->getTypes();
+
+        if ($separator === false) {
+            $this->_isAssoc = true;
+            $this->_isDotted = true;
+            $separator = '\.';
+            $lowercasedKey = false;
+        }
 
         foreach ($fields as $alias => $field) {
             // regular field
@@ -193,12 +200,6 @@ class JsonQuery extends Query
             }
 
             $parts = explode('@', $field);
-
-            if ($separator === false) {
-                $this->_isAssoc = true;
-                $this->_isDotted = true;
-                $separator = '\.';
-            }
 
             if ($separator === '.' || false !== strpos($alias, '.')) {
                 $this->_isDotted = true;
@@ -398,6 +399,7 @@ class JsonQuery extends Query
 
         // restoring dot separator
         $resultSet = parent::all();
+        $alias = $this->getRepository()->getAlias();
 
         // Entities case
         if ($this->_hydrate) {
@@ -405,24 +407,31 @@ class JsonQuery extends Query
 
             foreach ($resultSet as $result) {
                 $properties = $result->toArray();
+
                 foreach ($properties as $fieldname => $value) {
                     // Remove "fake" json fields used for sorting
                     if (false !== strpos($fieldname, '__orderingSelectedField__')) {
                         $result->unsetProperty($fieldname);
                     } elseif (false !== strpos($fieldname, '\.')) {
                         $result->unsetProperty($fieldname);
+
+                        // Clean fieldname from table alias
+                        $fieldname = str_replace($alias . '\.', '', $fieldname);
+
                         if ($this->_isAssoc) {
                             $dot = new Dot();
                             $dot->set(str_replace('\.', '.', $fieldname), $value);
                             $dot = $dot->all();
                             $key = array_keys($dot)[0];
                             $value = $dot[$key];
-                            $result->set($key, $value);
+                            $merged = ($result->get($key) ?? []) + $value;
+                            $result->set($key, $merged);
                         } else {
                             $result->set(str_replace('\.', '.', $fieldname), $value);
                         }
                     }
                 }
+
                 $result->clean();
                 $entities[] = $result;
             }
@@ -439,12 +448,15 @@ class JsonQuery extends Query
                 // Remove "fake" json fields used for sorting
                 if (false === strpos($fieldname, '__orderingSelectedField__')) {
                     if ($this->_isAssoc) {
+                        // Clean fieldname from table alias
+                        $fieldname = str_replace($alias . '\.', '', $fieldname);
                         $dot = new Dot();
                         $dot->set(str_replace('\.', '.', $fieldname), $value);
                         $dot = $dot->all();
                         $key = array_keys($dot)[0];
                         $value = $dot[$key];
-                        $data[$key] = $value;
+                        $merged = ($data[$key] ?? []) + $value;
+                        $data[$key] = $merged;
                     } else {
                         $data[str_replace('\.', '.', $fieldname)] = $value;
                     }

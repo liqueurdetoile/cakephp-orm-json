@@ -183,7 +183,38 @@ class JsonBehaviorTest extends TestCase
         ->jsonSelect(['deep.key@Users.attributes'], false, true);
 
         $result = $query->first();
-        $this->assertEquals('deepkey1', $result->users['attributes']['deep']['key']);
+        $this->assertEquals('deepkey1', $result->attributes['deep']['key']);
+    }
+
+    public function testSelectWithAssocOnEntitiesAndMultipleFieldsAndHydrationDisabled()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['deep.key@Users.attributes', 'string@attributes'], false, true);
+
+        $result = $query->first();
+        $this->assertEquals([
+          'string' => 'string1',
+          'deep' => [
+            'key' => 'deepkey1'
+          ]
+        ], $result->attributes);
+    }
+
+    /** @group current */
+    public function testSelectWithAssocOnEntitiesAndMultipleFields()
+    {
+        $query = $this->Users
+        ->find('json')
+        ->jsonSelect(['deep.key@Users.attributes', 'string@attributes'], false, true);
+
+        $result = $query->enableHydration(false)->first();
+        $this->assertEquals([
+          'string' => 'string1',
+          'deep' => [
+            'key' => 'deepkey1'
+          ]
+        ], $result['attributes']);
     }
 
     public function testSelectWithAssocOnArray()
@@ -193,7 +224,7 @@ class JsonBehaviorTest extends TestCase
         ->jsonSelect(['deep.key@Users.attributes'], false, true);
 
         $result = $query->enableHydration(false)->first();
-        $this->assertEquals('deepkey1', $result['users']['attributes']['deep']['key']);
+        $this->assertEquals('deepkey1', $result['attributes']['deep']['key']);
     }
 
     /** @group current */
