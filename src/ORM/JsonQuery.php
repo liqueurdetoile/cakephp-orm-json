@@ -10,6 +10,7 @@ use Cake\Datasource\ResultSetDecorator;
 use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Table;
 use Cake\Database\Schema\TableSchema;
+use Lqdt\OrmJson\Database\JsonValueBinder;
 
 /**
  * Extends the core Query class to provide support for parsing
@@ -88,6 +89,11 @@ class JsonQuery extends Query
         $parts = explode('@', $datfield);
         $path = array_shift($parts);
         $field = array_shift($parts);
+
+        if (empty($field)) {
+            return $path;
+        }
+
         return $field . '->"$.' . $path .'"';
     }
 
@@ -284,8 +290,39 @@ class JsonQuery extends Query
      */
     public function jsonWhere($conditions) : self
     {
-        $conditions = (array) $conditions;
-        $this->where($this->jsonExpression($conditions));
+        if (is_object($conditions) && is_callable($conditions)) {
+            $this->setValueBinder(new JsonValueBinder());
+            $parsedExpression = $this->newExpr();
+            $constraint = $conditions($this->newExpr(), $this);
+        } else {
+            $conditions = (array) $conditions;
+            $constraint = $this->newExpr($conditions);
+            // $constraint = $this->jsonExpression($conditions);
+        }
+
+        // traverse all constraints to update field name
+        $constraint->traverse(function ($exp) {
+            if (method_exists($exp, 'setField')) {
+                $fieldname = $this->jsonFieldName($exp->getField());
+                $value = $exp->getValue();
+                $operator = $exp->getOperator();
+
+                if (is_array($value)) {
+                    //$exp->setValue("CAST('" . json_encode($value) . "' AS JSON)");
+                    $exp = null;
+                    return;
+                }
+
+                if ($operator === 'like') {
+                    $exp->setValue('"' . $value . '"');
+                }
+
+                $exp->setField($fieldname);
+            }
+        });
+
+        $this->where($constraint);
+
         return $this;
     }
 

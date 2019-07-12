@@ -196,7 +196,6 @@ class JsonBehaviorTest extends TestCase
         $this->assertEquals('deepkey1', $result['users']['attributes']['deep']['key']);
     }
 
-    /** @group current */
     public function testSelectWithAssocOnDottedAlias()
     {
         $query = $this->Users
@@ -227,6 +226,22 @@ class JsonBehaviorTest extends TestCase
           ->find('json')
           ->select('id')
           ->jsonWhere(['username@attributes' => 'test1']);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
+    public function testWhereWithExpression()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($exp) {
+              return $exp->eq('username@attributes', 'test1');
+          });
 
         $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
@@ -277,6 +292,71 @@ class JsonBehaviorTest extends TestCase
         ], $result);
     }
 
+    public function testWhereWithStringAndNotLike()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(['username@attributes NOT LIKE' => '%1']);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 2],
+          ['id' => 3]
+        ], $result);
+    }
+
+    public function testWhereWithStringAndEqual()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(['username@attributes =' => 'test1']);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
+    public function testWhereWithStringAndnotEqual()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(['username@attributes !=' => 'test1']);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 2],
+          ['id' => 3]
+        ], $result);
+    }
+
+    public function testWhereWithStringAndnotEqualWithExpression()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($exp) {
+              $conditions = $exp->and_(function ($and) {
+                  return $and->eq('username@attributes', 'test1');
+              });
+
+              return $exp->not($conditions);
+          });
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 2],
+          ['id' => 3]
+        ], $result);
+    }
+
     public function testWhereInteger()
     {
         $query = $this->Users
@@ -297,6 +377,22 @@ class JsonBehaviorTest extends TestCase
           ->find('json')
           ->select('id')
           ->jsonWhere(['integer@attributes <' => 100]);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
+    public function testWhereIntegerWithComparisonWithExpression()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($exp) {
+              return $exp->lt('integer@attributes', 100, 'integer');
+          });
 
         $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
@@ -367,6 +463,25 @@ class JsonBehaviorTest extends TestCase
           ->find('json')
           ->select('id')
           ->jsonWhere(['array@attributes' => ['a','b']]);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
+    /** @group current */
+    public function testWhereArrayWithExpression()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($exp) {
+              return $exp->eq('array@attributes', ['a','b']);
+          });
+
+        debug($query);
 
         $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
         $result = $query->enableHydration(false)->toArray();
