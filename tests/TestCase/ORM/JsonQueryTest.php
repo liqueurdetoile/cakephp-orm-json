@@ -66,20 +66,4 @@ class JsonQueryTest extends TestCase
           $query->jsonFieldsNameinString("deep.mail@attributes NOT LIKE 'test@test.com'")
         );
     }
-
-    public function testJsonStatementWithString()
-    {
-        $query = $this->Users->jsonQuery();
-        $this->assertEquals(
-          ['attributes->"$.username" =' => 'test1'],
-          $query->jsonStatement("username@attributes", "test1")
-        );
-    }
-
-    public function testJsonStatementException()
-    {
-        $query = $this->Users->jsonQuery();
-        $this->expectException(\Cake\Core\Exception\Exception::class);
-        $query->jsonStatement("username@attributes", new \stdClass());
-    }
 }

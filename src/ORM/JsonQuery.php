@@ -3,7 +3,10 @@ namespace Lqdt\OrmJson\ORM;
 
 use Adbar\Dot;
 use Cake\ORM\Query;
+use Cake\Database\ExpressionInterface;
+use Cake\Database\Expression\Comparison;
 use Cake\Database\Expression\QueryExpression;
+use Cake\Database\Expression\UnaryExpression;
 use Cake\Core\Exception\Exception;
 use Cake\Database\Connection;
 use Cake\Datasource\ResultSetDecorator;
@@ -88,23 +91,29 @@ class JsonQuery extends Query
         $parts = explode('@', $datfield);
         $path = array_shift($parts);
         $field = array_shift($parts);
+
+        if (empty($field)) {
+            return $path;
+        }
+
         return $field . '->"$.' . $path .'"';
     }
 
     /**
-     * Apply jsonFieldName to every property name detected in a string
+     * Apply jsonFieldName to every property name detected in a string, mainly used
+     * to parse SQL fragments
      *
      * The regexp is a bit tricky to avoid collision with mail parameter value
      * that will be enclosed by quotes
      *
      * @version 1.0.0
      * @since   1.0.0
-     * @param   string             $conditions String to be reworked
-     * @return  string                         String with parsed fields/properties
+     * @param   string             $expression SQL fragment to be reworked
+     * @return  string             Parsed string that contains modified SQL fragment
      */
-    public function jsonFieldsNameInString(string $conditions) : string
+    public function jsonFieldsNameinString(string $expression) : string
     {
-        $ret = preg_replace_callback(
+        return preg_replace_callback(
             '|([^\w]*)([\w\.]+@[\w\.]+)|i',
             function ($matches) {
                 if (!preg_match('|[\'"]|', $matches[1])) {
@@ -112,59 +121,188 @@ class JsonQuery extends Query
                 }
                 return $matches[0];
             },
-            $conditions
+            $expression
         );
-
-        return $ret;
     }
 
     /**
-     * Parse a statement with JSON_EXTRACT short notation. It will convert
-     * usual operators to fit a mysql JSON field search
+     * Returns a new QueryExpression built upon the parsing of the expression to
+     * update datfield names
+     * @version 1.0.0
+     * @since   1.5.0
+     * @param   string          $expression Raw expression to transform
+     * @return  QueryExpression             QueryExpression
+     */
+    public function rawSqlConverter(string $expression) : QueryExpression
+    {
+        return $this->newExpr($this->jsonFieldsNameinString($expression));
+    }
+
+    /**
+     * Update or replace the Comparison expression to perform comparisons on
+     * datFields. In some cases, PDO limitations implies to replace the
+     * expression with a raw SQL fragment. It can be a bit dangerous when
+     * using raw user input to perform global matching in `array` mode.
+     *
+     * Regular fields expressions are left as is.
      *
      * @version 1.0.0
-     * @since   1.0.0
-     * @param   string       $field  Field call
-     * @param   mixed        $value  Value to match against the field
-     * @return  mixed                Array or string given the value type
+     * @since   1.5.0
+     * @param   Comparison $expression Comparison expression
+     * @return  Comparison|QueryExpression   Updated expression
      */
-    public function jsonStatement(string $field, $value)
+    public function comparisonConverter(Comparison $expression)
     {
-        // Check operand presence and add = if needed
-        if (false === strpos($field, ' ')) {
-            $field .= ' =';
-        };
+        $field = $expression->getField();
 
-        // Parse datfield notation
-        $field = $this->jsonFieldsNameInString($field);
+        if ($this->isDatField($field)) {
+            $field = $this->jsonFieldName($field);
+            $operator = $expression->getOperator();
+            $value = $expression->getValue();
+            $type = 'string';
 
-        if (is_null($value)) {
-            // Convert null search
-            return $field . ' ' . "CAST('null' AS JSON)";
-        } else {
-            // LIKE comparison statements must be surrounded by ""
-            if (preg_match('/ like/i', $field)) {
-                $value = '"' . $value . '"';
+            if (is_null($value)) {
+                // No PDO way to handle null
+                return $this->newExpr($field . ' = ' . "CAST('null' AS JSON)");
+            } else {
+                switch (gettype($value)) {
+                  case 'string':
+                    // LIKE and NOT LIKE comparison statements must be surrounded by "" to work
+                    if ($operator === 'like' || $operator === 'not like') {
+                        $value = '"' . $value . '"';
+                    }
+                    break;
+                  case 'integer':
+                    $type = 'integer';
+                    break;
+                  case 'double':
+                    // PDO statement are failing on float values and PDO::PARAM_STR is not valid choice
+                    // to allow Mysql operations on flot values within JSON fields
+                    return $this->newExpr($field . ' = ' . $value);
+                  case 'boolean':
+                    // PDO statement are also failing on boolean
+                    return $this->newExpr($field . ' = ' . ($value ? 'true': 'false'));
+                  case 'array':
+                    // No PDO way to handle arrays and objects
+                    return $this->newExpr($field . ' = ' . "CAST('" . json_encode($value) . "' AS JSON)");
+                  default:
+                    throw new Exception('Unsupported type for value : ' . gettype($value));
+                  break;
+                }
             }
-            switch (gettype($value)) {
-              case 'string':
-                // Use native prepared statement to prevent SQL injection
-                return [$field => $value];
-              case 'integer':
-              case 'double':
-                // PDO statement are failing on float values
-                return $field . ' ' . $value;
-              case 'boolean':
-                // PDO statement are also failing on boolean
-                return $field . ' ' . ($value ? 'true': 'false');
-              case 'array':
-                // Use native prepared statement to prevent SQL injection
-                return $field . ' ' . "CAST('" . json_encode($value) . "' AS JSON)";
-              default:
-                throw new Exception('Unsupported type for value : ' . gettype($value));
-              break;
-            }
+
+            return new Comparison($field, $value, $type, $operator);
         }
+
+        return $expression;
+    }
+
+    /**
+     * Parses the unary expression to apply conversions on childrens and returns
+     * an updated UnaryExpression
+     *
+     * **Note** : This a **VERY** hacky way because the UnaryExpression class doesn't expose
+     * getter/setter for protected `_value` property.
+     *
+     * In this implementation, it causes an infinite loop when used directly with a SQL fragment :
+     *
+     * `['NOT' => 'sub.prop@datfield like "%buggy%"]`
+     *
+     * @version 1.0.0
+     * @since   1.5.0
+     * @param   UnaryExpression $expression Expression
+     * @return  UnaryExpression             New expression
+     */
+    public function unaryExpressionConverter(UnaryExpression $expression) : UnaryExpression
+    {
+        $value = null;
+        $fetched = false;
+        $expression->traverse(function ($exp) use ($fetched, &$value) {
+            if ($fetched === false) {
+                $fetched = true;
+                $value = $this->expressionConverter($exp);
+            }
+        });
+
+        return new UnaryExpression('NOT', $value);
+    }
+
+    /**
+     * Iterates over a QueryExpression and replace Comparison expressions
+     * to handle JSON comparison in datfields.
+     *
+     * @version 1.0.0
+     * @since   1.5.0
+     * @param   QueryExpression $expression QueryExpression
+     * @return  QueryExpression             Updated QueryExpression
+     */
+    public function queryExpressionConverter(QueryExpression $expression) : QueryExpression
+    {
+        $expression->iterateParts(function ($condition, $key) {
+            return $this->expressionConverter($condition);
+        });
+
+        return $expression;
+    }
+
+    /**
+     * Returns the appropriate ExpressionInterface regarding the incoming one
+     *
+     * @version 1.0.0
+     * @since   1.5.0
+     * @param   string|ExpressionInterface      $expression Incoming expression
+     * @return  ExpressionInterface             Updated expression
+     */
+    public function expressionConverter($expression) : ExpressionInterface
+    {
+        if (is_string($expression)) {
+            return $this->rawSqlConverter($expression);
+        }
+
+        if ($expression instanceof QueryExpression) {
+            return $this->queryExpressionConverter($expression);
+        }
+
+        if ($expression instanceof Comparison) {
+            return $this->comparisonConverter($expression);
+        }
+
+        if ($expression instanceof UnaryExpression) {
+            return $this->unaryExpressionConverter($expression);
+        }
+
+        throw new Exception('Unmanaged expression');
+    }
+
+    /**
+     * Add conditions to the query that can be matched against datfield value
+     *
+     * jsonWhere accepts exactly the same parameters than the regular Query::where method
+     *
+     * The conditions are first parsed in a regular QueryExpression. The result is then
+     * converted to replace Comparison expressions in a suitable way to query
+     * JSON fields in database.
+     *
+     * The conditions that are matching regular fields are kept intact, thus allowing
+     * to mix regular/datfields comparisons in a single call to jsonWhere.
+     *
+     * @version 1.1.0
+     * @since   1.0.0
+     * @param   string|array|callable       $conditions Conditions for WHERE clause
+     * @return  JsonQuery                   Self for chaining
+     */
+    public function jsonWhere($conditions) : self
+    {
+        if (is_object($conditions) && is_callable($conditions)) {
+            $expression = $conditions($this->newExpr(), $this);
+        } else {
+            $expression = $this->newExpr($conditions);
+        }
+
+        $jsonExpression = $this->expressionConverter($expression);
+        $this->where($jsonExpression);
+
+        return $this;
     }
 
     /**
@@ -221,72 +359,6 @@ class JsonQuery extends Query
         }
 
         $this->getSelectTypeMap()->setTypes($types);
-        return $this;
-    }
-
-    /**
-     * Build a QueryExpression object given the conditions input while
-     * parsing dotted fields as JSON_EXTRACT short notation.
-     * The conditions are evaluated with jsonStatement to fit
-     * JSON search compatibility
-     *
-     * @version 1.0.0
-     * @since   1.0.0
-     * @param   array|string    $conditions Conditions for WHERE clause
-     * @param   string          $operand    value for QueryExpression::setConjunction. It can be OR or AND
-     * @param   boolean         $not        If true, the condition(s) will be negate by a NOT()
-     * @return  QueryExpression             CakePHP QueryExpression object usable with Query::where
-     */
-    public function jsonExpression($conditions, $operand = 'AND', $not = false) : QueryExpression
-    {
-        $conditions = (array) $conditions;
-        $exp = $this->newExpr()->setConjunction($operand);
-
-        foreach ($conditions as $field => $value) {
-            if (is_string($field) && strtoupper($field) !== 'OR' && strtoupper($field) !== 'NOT') {
-                if ($not) {
-                    $exp->not($this->jsonStatement($field, $value));
-                    continue;
-                }
-                $exp->add($this->jsonStatement($field, $value));
-                continue;
-            }
-
-            if (strtoupper($field) === 'OR') {
-                $exp->add($this->jsonExpression($value, 'OR', $not));
-                continue;
-            }
-
-            if (strtoupper($field) === 'NOT') {
-                $exp->add($this->jsonExpression($value, $operand, true));
-                continue;
-            }
-
-            if (is_integer($field)) {
-                $value = $this->jsonFieldsNameInString($value);
-                if ($not) {
-                    $exp->not($value);
-                    continue;
-                }
-                $exp->add($value);
-                continue;
-            }
-        }
-
-        return $exp;
-    }
-
-    /**
-     * Where clause builder
-     * @version 1.0.0
-     * @since   1.0.0
-     * @param   string|array    $conditions Conditions for WHERE clause
-     * @return  JsonQuery                   Self for chaining
-     */
-    public function jsonWhere($conditions) : self
-    {
-        $conditions = (array) $conditions;
-        $this->where($this->jsonExpression($conditions));
         return $this;
     }
 
@@ -387,7 +459,7 @@ class JsonQuery extends Query
      * When extracting data, it unescapes dotted field names and clean
      * json fields used for sorting and not requested
      *
-     * @version 1.1.0
+     * @version 1.1.2
      * @since   1.3.0
      * @return  ResultSetInterface    Result set to iterate on
      */

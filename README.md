@@ -172,6 +172,7 @@ $query = $this->Users
     'json.sort' => ['created@attributes' => 'DESC']
   ->all();
 ```
+
 #### Selecting datfields
 It works exactly in the same manner than the `fields` option or the `select` method.
 
@@ -198,40 +199,39 @@ $this->Users->find('json')->jsonSelect(['my.key' => 'the.deep.key@attributes'], 
 // will return ['my' => ['key' => 'deepvalue']]
 ```
 
-- **Note :** As version >= 1.3.0, you can safely use a dot as a separator or in aliases.
-
-- **Note :** As version >= 1.4.0, you can fetch back an associative array to be directly used in JSON data exchange through API
-
 #### filtering datfields
 When using `jsonWhere`, you can use any of regular nesting and operator provided as an array. You can also use plain query. In this last case, string values won't be escaped.
 
-**Note: you can mix "regular" fields from table with JSON field internal data when using `json.conditions` or `jsonWhere`. **
+**Note**: you can mix "regular" fields from table with JSON field internal data when using `json.conditions` or `jsonWhere`.
 
 ```php
 // In your controller
 $query = $this->Users
   ->find('json')
-  ->jsonWhere([
+  ->jsonWhere([ // Classic array way
     'OR' => [
       'username@attributes =' => 'user'
       'prefs.color@attributes LIKE' => '%dark%'
     ]
   ]);
 
+	// Dangerous raw SQL way
   $query = $this->Users
     ->find('json')
-    ->jsonWhere("username@attributes = 'user' OR prefs.color@attributes LIKE '\"%dark\"'")
+		->jsonWhere("username@attributes = 'user' OR prefs.color@attributes LIKE '\"%dark\"'");
+
+	// Query expression way
+  $query = $this->Users
+    ->find('json')
+		->jsonWhere(function($q) {
+				return $q->_or(['username@attributes' => 'user'])->like('prefs.color@attributes', '%dark%');
+		});
 ```
-When using array form, string values will be escaped through PDO prepared query.
-
-**At this time, you can't use function callbacks to build complex queries.**
-
-If you're in need, a `JsonQuery` also expose a `jsonExpression` method that will return a core `QueryExpression` that can be latter combined. See API reference for details.
 
 #### Sorting datfields
 It's exactly the same syntax than `order`|`sort` option or `order` method. If the provided parameter is a string, it will be treated as a default ASC ordering on this field. If the provided parameter is an array of strings, default ASC ordering will also be applied.
 
-**Note: you can mix "regular" fields from table with JSON field internal data when using `json.sort` or `jsonOrder`. **
+**Note**: you can mix "regular" fields from table with JSON field internal data when using `json.sort` or `jsonOrder`.
 
 ### Create and update JSON in an entity from model
 Since v1.1.0, fields names are filtered before marshalling when using `Model::newEntity` or `Model::patchEntity`.
@@ -287,6 +287,9 @@ $username = $user->jsonGet('attributes')->username;
 See [API reference](https://liqueurdetoile.github.io/cakephp-orm-json/)
 
 ## Changelog
+**v1.5.0**
+- Full rework of `jsonWhere` to replace previous conditions array parsing by a full `QueryExpression` build that allows the use of query expressions callbacks
+
 **v1.4.0**
 - Add support to optionally fetch back an associative array instead having flattened keys when selecting statements
 
