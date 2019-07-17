@@ -144,46 +144,46 @@
                                 <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-588752666"></a>
+                                    <a class="accordion-toggle " data-toggle="collapse" data-target="#namespace-1338392828"></a>
                                 <a href="../namespaces/default.html" style="margin-left: 30px; padding-left: 0">\</a>
             </div>
-            <div id="namespace-588752666" class="accordion-body collapse in">
+            <div id="namespace-1338392828" class="accordion-body collapse in">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1273417023"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-269935301"></a>
                                 <a href="../namespaces/Lqdt.html" style="margin-left: 30px; padding-left: 0">Lqdt</a>
             </div>
-            <div id="namespace-1273417023" class="accordion-body collapse ">
+            <div id="namespace-269935301" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1042423496"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-945956719"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.html" style="margin-left: 30px; padding-left: 0">OrmJson</a>
             </div>
-            <div id="namespace-1042423496" class="accordion-body collapse ">
+            <div id="namespace-945956719" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1977250463"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1534347116"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.html" style="margin-left: 30px; padding-left: 0">Model</a>
             </div>
-            <div id="namespace-1977250463" class="accordion-body collapse ">
+            <div id="namespace-1534347116" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-1753222743"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-968204504"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.Behavior.html" style="margin-left: 30px; padding-left: 0">Behavior</a>
             </div>
-            <div id="namespace-1753222743" class="accordion-body collapse ">
+            <div id="namespace-968204504" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -198,10 +198,10 @@
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-29718116"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-778365226"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.Model.Entity.html" style="margin-left: 30px; padding-left: 0">Entity</a>
             </div>
-            <div id="namespace-29718116" class="accordion-body collapse ">
+            <div id="namespace-778365226" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -224,10 +224,10 @@
                                                     <div class="accordion" style="margin-bottom: 0">
         <div class="accordion-group">
             <div class="accordion-heading">
-                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-134773603"></a>
+                                    <a class="accordion-toggle collapsed" data-toggle="collapse" data-target="#namespace-405282720"></a>
                                 <a href="../namespaces/Lqdt.OrmJson.ORM.html" style="margin-left: 30px; padding-left: 0">ORM</a>
             </div>
-            <div id="namespace-134773603" class="accordion-body collapse ">
+            <div id="namespace-405282720" class="accordion-body collapse ">
                 <div class="accordion-inner">
 
                     
@@ -801,7 +801,7 @@ using raw user input to perform global matching in `array` mode.</em></p>
                             version
                         </th>
                         <td>
-                                                            1.0.0                                
+                                                            1.0.2                                
                                                     </td>
                     </tr>
                                     <tr>
@@ -829,6 +829,7 @@ an updated UnaryExpression</em></p>
 getter/setter for protected <code>_value</code> property.</p>
 <p>In this implementation, it causes an infinite loop when used directly with a SQL fragment :</p>
 <p><code>['NOT' =&gt; 'sub.prop@datfield like "%buggy%"]</code></p>
+<p>That's why, an exception is thrown as soon as $value is extracted</p>
 
                                     <h4>Parameters</h4>
                     <table class="table table-condensed table-hover">
@@ -857,7 +858,7 @@ getter/setter for protected <code>_value</code> property.</p>
                             version
                         </th>
                         <td>
-                                                            1.0.0                                
+                                                            1.0.1                                
                                                     </td>
                     </tr>
                                     <tr>
@@ -1055,7 +1056,7 @@ resulting field name</p>
                                                     <tr>
                                 <td>string|boolean</td>
                                 <td>$separator </td>
-                                <td><p>Separator sting for field aliases name (dot is not allowed). Set it to false to return Resultset as associative array</p></td>
+                                <td><p>Separator string for field aliases name (dot is not allowed). Set it to false to return Resultset as associative array</p></td>
                             </tr>
                                                     <tr>
                                 <td>boolean</td>
@@ -1358,7 +1359,7 @@ json fields used for sorting and not requested</p>
                 <section class="span10 offset1">
                     <hr />
                     Documentation is powered by <a href="http://www.phpdoc.org/">phpDocumentor </a> and authored
-                    on July 17th, 2019 at 00:43.
+                    on July 17th, 2019 at 14:57.
                 </section>
             </section>
         </section>

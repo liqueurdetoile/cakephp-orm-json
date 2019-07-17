@@ -82,6 +82,22 @@ class JsonBehaviorWhereWithFloatTest extends TestCase
         ], $result);
     }
 
+    public function testWhereDecimalWithFormulaInExpressionNotEq()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($q) {
+              return $q->notEq('decimal@attributes', 100);
+          });
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
     public function testWhereFloat()
     {
         $query = $this->Users

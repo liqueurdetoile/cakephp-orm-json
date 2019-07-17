@@ -146,7 +146,7 @@ class JsonQuery extends Query
      *
      * Regular fields expressions are left as is.
      *
-     * @version 1.0.1
+     * @version 1.0.2
      * @since   1.5.0
      * @param   Comparison $expression Comparison expression
      * @return  Comparison|QueryExpression   Updated expression
@@ -220,6 +220,7 @@ class JsonQuery extends Query
                     // We must rebuild a SQL fragment from original expression data
                     switch ($operator) {
                       case '=':
+                      case '!=':
                       case '<>':
                         $cleanoperator = $operator;
                         break;
@@ -227,7 +228,7 @@ class JsonQuery extends Query
                         $cleanoperator = '=';
                         break;
                       case 'notEq':
-                        $cleanoperator = '<>';
+                        $cleanoperator = '!=';
                         break;
                       default:
                         throw new Exception('Unsupported operator ' . $operator . ' with BOOLEAN data type');

@@ -247,6 +247,22 @@ class JsonBehaviorWhereTest extends TestCase
         ], $result);
     }
 
+    public function testWhereBooleanInExpression()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(function ($q) {
+              return $q->notEq('boolean@attributes', false);
+          });
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1]
+        ], $result);
+    }
+
     public function testWhereNull()
     {
         $query = $this->Users
