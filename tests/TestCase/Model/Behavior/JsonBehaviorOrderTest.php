@@ -8,7 +8,7 @@ use Cake\TestSuite\TestCase;
  * App\Model\Behavior\JsonBehavior Test Case
  */
 
-class JsonSortingTest extends TestCase
+class JsonBehaviorOrderTest extends TestCase
 {
     public $Users; // Mock up model
     public $fixtures = ['Lqdt\OrmJson\Test\Fixture\SortingusersFixture'];

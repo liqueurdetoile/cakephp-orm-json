@@ -146,7 +146,7 @@ class JsonQuery extends Query
      *
      * Regular fields expressions are left as is.
      *
-     * @version 1.0.0
+     * @version 1.0.1
      * @since   1.5.0
      * @param   Comparison $expression Comparison expression
      * @return  Comparison|QueryExpression   Updated expression
@@ -159,7 +159,6 @@ class JsonQuery extends Query
             $field = $this->jsonFieldName($field);
             $operator = $expression->getOperator();
             $value = $expression->getValue();
-            $type = 'string';
 
             if (is_null($value)) {
                 // No PDO way to handle null
@@ -171,20 +170,90 @@ class JsonQuery extends Query
                     if ($operator === 'like' || $operator === 'not like') {
                         $value = '"' . $value . '"';
                     }
+                    $type = 'string';
                     break;
+
                   case 'integer':
                     $type = 'integer';
                     break;
+
                   case 'double':
                     // PDO statement are failing on float values and PDO::PARAM_STR is not valid choice
-                    // to allow Mysql operations on flot values within JSON fields
-                    return $this->newExpr($field . ' = ' . $value);
+                    // to allow Mysql operations on float values within JSON fields
+                    // We must rebuild a SQL fragment from original expression data
+
+                    switch ($operator) {
+                      case '=':
+                      case '<':
+                      case '>':
+                      case '<=':
+                      case '>=':
+                      case '<>':
+                        $cleanoperator = $operator;
+                        break;
+                      case 'eq':
+                        $cleanoperator = '=';
+                        break;
+                      case 'notEq':
+                        $cleanoperator = '<>';
+                        break;
+                      case 'lt':
+                        $cleanoperator = '<';
+                        break;
+                      case 'lte':
+                        $cleanoperator = '<=';
+                        break;
+                      case 'gte':
+                        $cleanoperator = '>=';
+                        break;
+                      case 'gt':
+                        $cleanoperator = '>';
+                        break;
+                      default:
+                        throw new Exception('Unsupported operator ' . $operator . ' with DOUBLE data type');
+                    }
+
+                    return $this->newExpr($field . " $cleanoperator " . $value);
+
                   case 'boolean':
                     // PDO statement are also failing on boolean
-                    return $this->newExpr($field . ' = ' . ($value ? 'true': 'false'));
+                    // We must rebuild a SQL fragment from original expression data
+                    switch ($operator) {
+                      case '=':
+                      case '<>':
+                        $cleanoperator = $operator;
+                        break;
+                      case 'eq':
+                        $cleanoperator = '=';
+                        break;
+                      case 'notEq':
+                        $cleanoperator = '<>';
+                        break;
+                      default:
+                        throw new Exception('Unsupported operator ' . $operator . ' with BOOLEAN data type');
+                    }
+
+                    return $this->newExpr($field . " $cleanoperator " . ($value ? 'true': 'false'));
+
                   case 'array':
                     // No PDO way to handle arrays and objects
-                    return $this->newExpr($field . ' = ' . "CAST('" . json_encode($value) . "' AS JSON)");
+                    switch ($operator) {
+                      case '=':
+                      case '<>':
+                        $cleanoperator = $operator;
+                        break;
+                      case 'eq':
+                        $cleanoperator = '=';
+                        break;
+                      case 'notEq':
+                        $cleanoperator = '<>';
+                        break;
+                      default:
+                        throw new Exception('Unsupported operator ' . $operator . ' with OBJECT/ARRAY data type');
+                    }
+
+                    return $this->newExpr($field . " $cleanoperator " . "CAST('" . json_encode($value) . "' AS JSON)");
+
                   default:
                     throw new Exception('Unsupported type for value : ' . gettype($value));
                   break;
@@ -208,7 +277,9 @@ class JsonQuery extends Query
      *
      * `['NOT' => 'sub.prop@datfield like "%buggy%"]`
      *
-     * @version 1.0.0
+     * That's why, an exception is thrown as soon as $value is extracted
+     *
+     * @version 1.0.1
      * @since   1.5.0
      * @param   UnaryExpression $expression Expression
      * @return  UnaryExpression             New expression
@@ -216,15 +287,18 @@ class JsonQuery extends Query
     public function unaryExpressionConverter(UnaryExpression $expression) : UnaryExpression
     {
         $value = null;
-        $fetched = false;
-        $expression->traverse(function ($exp) use ($fetched, &$value) {
-            if ($fetched === false) {
-                $fetched = true;
+        try {
+            $expression->traverse(function ($exp) use (&$value) {
                 $value = $this->expressionConverter($exp);
+                throw new Exception();
+            });
+        } catch (Exception $err) {
+            if (!empty($value)) {
+                return new UnaryExpression('NOT', $value);
+            } else {
+                throw new Exception('Unable to extract value from UnaryExpression');
             }
-        });
-
-        return new UnaryExpression('NOT', $value);
+        }
     }
 
     /**
