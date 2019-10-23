@@ -146,7 +146,7 @@ class JsonQuery extends Query
      *
      * Regular fields expressions are left as is.
      *
-     * @version 1.0.2
+     * @version 1.0.3
      * @since   1.5.0
      * @param   Comparison $expression Comparison expression
      * @return  Comparison|QueryExpression   Updated expression
@@ -249,6 +249,8 @@ class JsonQuery extends Query
                       case 'notEq':
                         $cleanoperator = '<>';
                         break;
+                      case 'in':
+                        return $this->newExpr("JSON_CONTAINS(CAST('" . json_encode($value) . "' AS JSON), " . $field . ")");
                       default:
                         throw new Exception('Unsupported operator ' . $operator . ' with OBJECT/ARRAY data type');
                     }

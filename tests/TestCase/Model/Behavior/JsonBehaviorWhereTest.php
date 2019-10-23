@@ -110,6 +110,21 @@ class JsonBehaviorWhereTest extends TestCase
         ], $result);
     }
 
+    public function testWhereOnEmailValueWithInOperator()
+    {
+        $query = $this->Users
+          ->find('json')
+          ->select('id')
+          ->jsonWhere(['email@attributes IN' => ['test1@liqueurdetoile.com', 'test2@liqueurdetoile.com']]);
+
+        $this->assertInstanceOf('Lqdt\OrmJson\ORM\JsonQuery', $query);
+        $result = $query->enableHydration(false)->toArray();
+        $this->assertEquals([
+          ['id' => 1],
+          ['id' => 2],
+        ], $result);
+    }
+
     public function testWhereWithStringAndLike()
     {
         $query = $this->Users
