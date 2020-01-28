@@ -22,8 +22,6 @@ use Lqdt\OrmJson\Utility\DatField;
  */
 trait DatFieldTrait
 {
-    protected $_hidden = [];
-
     public function __construct(array $properties = [], array $options = [])
     {
         parent::__construct($properties, $options);
@@ -32,12 +30,14 @@ trait DatFieldTrait
         $repository = TableRegistry::getTableLocator()->get($this->getSource());
         if ($repository->hasBehavior('DatField') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
             $keys = $repository->getForeignKeys();
+            $properties = [];
             foreach ($keys as $key) {
                 extract($key);
                 $value = (new Dot($properties[$field]))->get($path);
                 $this[$property] = $value;
-                $this->_hidden[] = $property;
+                $properties[] = $property;
             }
+            $this->setHidden($properties, true);
         }
     }
 
