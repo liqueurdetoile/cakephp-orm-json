@@ -28,7 +28,7 @@ trait DatFieldTrait
 
         // Process foreign keys and expose it as entity property to allow ORM EagerLoder to link data
         $repository = TableRegistry::getTableLocator()->get($this->getSource());
-        if ($repository->hasBehavior('DatField') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
+        if ($repository->hasBehavior('Datfield') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
             $keys = $repository->getForeignKeys();
             $properties = [];
             foreach ($keys as $key) {

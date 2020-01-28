@@ -20,7 +20,7 @@ class DatFieldMysql extends Mysql
         return function ($query) use ($type) {
             $repository = $query->getRepository();
 
-            if ($repository->hasBehavior('DatField') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
+            if ($repository->hasBehavior('Datfield') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
                 // Process order
                 $order = $query->clause('order');
                 if (!empty($order)) {
