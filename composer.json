@@ -3,7 +3,7 @@
     "description": "Cakephp plugin to provide easy control over JSON type fields in database",
     "type": "cakephp-plugin",
     "license": "MIT",
-    "version": "1.5.4",
+    "version": "2.0.0-dev",
     "authors": [
         {
             "name": "Liqueur de Toile",
