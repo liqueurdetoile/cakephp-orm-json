@@ -12,31 +12,34 @@ use Lqdt\OrmJson\Utility\DatField;
 trait DatFieldMysqlWhereTrait
 {
     /**
-     * Returns the appropriate ExpressionInterface regarding the incoming one
+     * Parse where expressions and update JSON fields
      *
-     * @version 1.0.0
-     * @since   1.5.0
+     * @version 2.0.0
+     * @since   2.0.0
      * @param   string|ExpressionInterface      $expression Incoming expression
      */
     protected function _filtersConverter($expression, Query $query)
     {
+        // Weird case though always possible
         if (is_string($expression)) {
             return $this->_rawSqlConverter($expression, $query);
         }
 
+        // Catch SQL fragments at top level
         if ($expression instanceof QueryExpression) {
-            return $this->_queryExpressionConverter($expression, $query);
+            $this->_queryExpressionConverter($expression, $query);
         }
 
-        if ($expression instanceof Comparison) {
-            return $this->_comparisonConverter($expression, $query);
-        }
+        // Process inner expressions
+        $expression->traverse(function ($expr) use ($query) {
+            if ($expr instanceof Comparison) {
+                $this->_comparisonConverter($expr, $query);
+            }
 
-        if ($expression instanceof UnaryExpression) {
-            return $this->_unaryExpressionConverter($expression, $query);
-        }
-
-        throw new Exception('Unmanaged expression');
+            if ($expr instanceof QueryExpression) {
+                $this->_queryExpressionConverter($expr, $query);
+            }
+        });
     }
 
     /**
@@ -47,9 +50,29 @@ trait DatFieldMysqlWhereTrait
      * @param   string          $expression Raw expression to transform
      * @return  QueryExpression             QueryExpression
      */
-    protected function _rawSqlConverter(string $expression, Query $query) : QueryExpression
+    protected function _rawSqlConverter(string $expression, Query $query)
     {
-        return $query->newExpr(DatField::jsonFieldsNameinString($expression));
+        return DatField::jsonFieldsNameinString($expression);
+    }
+
+    /**
+     * Iterates over a QueryExpression to parse datfields in SQL fragments
+     * Expressions are left unchanged as they'll be processed later when traversing the expression
+     *
+     * @version 1.0.0
+     * @since   1.5.0
+     * @param   QueryExpression $expression QueryExpression
+     * @return  QueryExpression             Updated QueryExpression
+     */
+    protected function _queryExpressionConverter(QueryExpression $expression, Query $query)
+    {
+        $expression->iterateParts(function ($condition, $key) use ($query) {
+            if (is_string($condition)) {
+                return $this->_rawSqlConverter($condition, $query);
+            }
+
+            return $condition;
+        });
     }
 
     /**
@@ -69,171 +92,170 @@ trait DatFieldMysqlWhereTrait
     {
         $field = $expression->getField();
 
+        if ($field instanceof ExpressionInterface) {
+            return;
+        }
+
         if (DatField::isDatField($field)) {
             $field = DatField::jsonFieldName($field, false, $query->getRepository()->getAlias());
             $operator = $expression->getOperator();
             $value = $expression->getValue();
 
             if (is_null($value)) {
-                // No PDO way to handle null
-                return $query->newExpr($field . ' = ' . "CAST('null' AS JSON)");
-            } else {
-                switch (gettype($value)) {
-                  case 'string':
-                    // LIKE and NOT LIKE comparison statements must be surrounded by "" to work
-                    if ($operator === 'like' || $operator === 'not like') {
-                        $value = '"' . $value . '"';
-                    }
-                    $type = 'string';
-                    break;
-
-                  case 'integer':
-                    $type = 'integer';
-                    break;
-
-                  case 'double':
-                    // PDO statement are failing on float values and PDO::PARAM_STR is not valid choice
-                    // to allow Mysql operations on float values within JSON fields
-                    // We must rebuild a SQL fragment from original expression data
-
-                    switch ($operator) {
-                      case '=':
-                      case '<':
-                      case '>':
-                      case '<=':
-                      case '>=':
-                      case '<>':
-                        $cleanoperator = $operator;
-                        break;
-                      case 'eq':
-                        $cleanoperator = '=';
-                        break;
-                      case 'notEq':
-                        $cleanoperator = '<>';
-                        break;
-                      case 'lt':
-                        $cleanoperator = '<';
-                        break;
-                      case 'lte':
-                        $cleanoperator = '<=';
-                        break;
-                      case 'gte':
-                        $cleanoperator = '>=';
-                        break;
-                      case 'gt':
-                        $cleanoperator = '>';
-                        break;
-                      default:
-                        throw new Exception('Unsupported operator ' . $operator . ' with DOUBLE data type');
-                    }
-
-                    return $query->newExpr($field . " $cleanoperator " . $value);
-
-                  case 'boolean':
-                    // PDO statement are also failing on boolean
-                    // We must rebuild a SQL fragment from original expression data
-                    switch ($operator) {
-                      case '=':
-                      case '!=':
-                      case '<>':
-                        $cleanoperator = $operator;
-                        break;
-                      case 'eq':
-                        $cleanoperator = '=';
-                        break;
-                      case 'notEq':
-                        $cleanoperator = '!=';
-                        break;
-                      default:
-                        throw new Exception('Unsupported operator ' . $operator . ' with BOOLEAN data type');
-                    }
-
-                    return $query->newExpr($field . " $cleanoperator " . ($value ? 'true': 'false'));
-
-                  case 'array':
-                    // No PDO way to handle arrays and objects
-                    switch ($operator) {
-                      case '=':
-                      case '<>':
-                        $cleanoperator = $operator;
-                        break;
-                      case 'eq':
-                        $cleanoperator = '=';
-                        break;
-                      case 'notEq':
-                        $cleanoperator = '<>';
-                        break;
-                      case 'in':
-                      case 'IN':
-                        return $query->newExpr("JSON_CONTAINS(CAST('" . json_encode(array_values($value)) . "' AS JSON), " . $field . ")");
-                      default:
-                        throw new Exception('Unsupported operator ' . $operator . ' with OBJECT/ARRAY data type');
-                    }
-
-                    return $query->newExpr($field . " $cleanoperator " . "CAST('" . json_encode($value) . "' AS JSON)");
-
-                  default:
-                    throw new Exception('Unsupported type for value : ' . gettype($value));
-                  break;
-                }
+                $this->_convertNullData($expression, $field, $operator, $value, $query);
+                return;
             }
 
-            return new Comparison($field, $value, $type, $operator);
+            switch (gettype($value)) {
+              case 'boolean':
+                $this->_convertBooleanData($expression, $field, $operator, $value, $query);
+                return;
+
+              case 'string':
+                $this->_convertStringData($expression, $field, $operator, $value, $query);
+                return;
+
+              case 'integer':
+                $this->_convertIntegerData($expression, $field, $operator, $value, $query);
+                return;
+
+              case 'double':
+                $this->_convertDoubleData($expression, $field, $operator, $value, $query);
+                return;
+
+              case 'array':
+                return $this->_convertArrayData($expression, $field, $operator, $value, $query);
+              default:
+                throw new Exception('Unsupported type for value : ' . gettype($value));
+              break;
+            }
         }
 
-        return $expression;
+        return;
     }
 
-    /**
-     * Parses the unary expression to apply conversions on childrens and returns
-     * an updated UnaryExpression
-     *
-     * **Note** : This a **VERY** hacky way because the UnaryExpression class doesn't expose
-     * getter/setter for protected `_value` property.
-     *
-     * In this implementation, it causes an infinite loop when used directly with a SQL fragment :
-     *
-     * `['NOT' => 'sub.prop@datfield like "%buggy%"]`
-     *
-     * That's why, an exception is thrown as soon as $value is extracted
-     *
-     * @version 1.0.1
-     * @since   1.5.0
-     * @param   UnaryExpression $expression Expression
-     * @return  UnaryExpression             New expression
-     */
-    protected function _unaryExpressionConverter(UnaryExpression $expression, Query $query) : UnaryExpression
+    protected function _convertNullData($expression, $field, $operator, $value, $query)
     {
-        $value = null;
-        try {
-            $expression->traverse(function ($exp) use (&$value, $query) {
-                $value = $this->_filtersConverter($exp, $query);
-                throw new Exception();
-            });
-        } catch (Exception $err) {
-            if (!empty($value)) {
-                return new UnaryExpression('NOT', $value);
-            } else {
-                throw new Exception('Unable to extract value from UnaryExpression');
-            }
+        $expression->setField($field);
+        $expression->setOperator('=');
+        $expression->setValue($query->newExpr("CAST('null' AS JSON)"));
+    }
+
+    protected function _convertBooleanData($expression, $field, $operator, $value, $query)
+    {
+        switch ($operator) {
+          case '=':
+          case '!=':
+          case '<>':
+            $cleanoperator = $operator;
+            break;
+          case 'eq':
+            $cleanoperator = '=';
+            break;
+          case 'notEq':
+            $cleanoperator = '!=';
+            break;
+          default:
+            throw new Exception('Unsupported operator ' . $operator . ' with BOOLEAN data type');
+        }
+
+        $expression->setField($field);
+        $expression->setOperator($cleanoperator);
+        $expression->setValue($query->newExpr($value ? 'true': 'false'));
+    }
+
+    protected function _convertStringData($expression, $field, $operator, $value)
+    {
+        $expression->setField($field);
+        // LIKE and NOT LIKE comparison statements must be surrounded by "" to work
+        if ($operator === 'like' || $operator === 'not like') {
+            $expression->setValue('"' . $value . '"');
         }
     }
 
-    /**
-     * Iterates over a QueryExpression and replace Comparison expressions
-     * to handle JSON comparison in datfields.
-     *
-     * @version 1.0.0
-     * @since   1.5.0
-     * @param   QueryExpression $expression QueryExpression
-     * @return  QueryExpression             Updated QueryExpression
-     */
-    protected function _queryExpressionConverter(QueryExpression $expression, Query $query) : QueryExpression
+    protected function _convertIntegerData($expression, $field, $operator, $value, $query)
     {
-        $expression->iterateParts(function ($condition, $key) use ($query) {
-            return $this->_filtersConverter($condition, $query);
-        });
+        $expression->setField($field);
+        $expression->setValue($query->newExpr((string) $value));
+    }
 
-        return $expression;
+    /**
+     * PDO statement are failing on float values and PDO::PARAM_STR is not valid choice
+     * to allow Mysql operations on float values within JSON fields
+     * @version [version]
+     * @since   [since]
+     * @param   [type]    $expression [description]
+     * @param   [type]    $field      [description]
+     * @param   [type]    $operator   [description]
+     * @param   [type]    $value      [description]
+     * @return  [type]                [description]
+     */
+    protected function _convertDoubleData($expression, $field, $operator, $value, $query)
+    {
+        switch ($operator) {
+          case '=':
+          case '<':
+          case '>':
+          case '<=':
+          case '>=':
+          case '<>':
+            $cleanoperator = $operator;
+            break;
+          case 'eq':
+            $cleanoperator = '=';
+            break;
+          case 'notEq':
+            $cleanoperator = '<>';
+            break;
+          case 'lt':
+            $cleanoperator = '<';
+            break;
+          case 'lte':
+            $cleanoperator = '<=';
+            break;
+          case 'gte':
+            $cleanoperator = '>=';
+            break;
+          case 'gt':
+            $cleanoperator = '>';
+            break;
+          default:
+            throw new Exception('Unsupported operator ' . $operator . ' with DOUBLE data type');
+        }
+
+        $expression->setField($field);
+        $expression->setOperator($cleanoperator);
+        $expression->setValue($query->newExpr((string) $value));
+    }
+
+    protected function _convertArrayData($expression, $field, $operator, $value, $query)
+    {
+        $generator = $query->getValueBinder();
+
+        switch ($operator) {
+          case '=':
+          case '<>':
+            $cleanoperator = $operator;
+            break;
+          case 'eq':
+            $cleanoperator = '=';
+            break;
+          case 'notEq':
+            $cleanoperator = '<>';
+            break;
+          case 'in':
+          case 'IN':
+            $value = array_values($value);
+            $expression->setField("JSON_CONTAINS(CAST('" . json_encode($value) . "' AS JSON), " . $field . ")");
+            $expression->setOperator('=');
+            $expression->setValue($query->newExpr('1'));
+            return;
+          default:
+            throw new Exception('Unsupported operator ' . $operator . ' with OBJECT/ARRAY data type');
+        }
+
+        $expression->setField($field);
+        $expression->setOperator($cleanoperator);
+        $expression->setValue($query->newExpr("CAST('" . json_encode($value) . "' AS JSON)"));
     }
 }

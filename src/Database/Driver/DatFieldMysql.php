@@ -42,7 +42,8 @@ class DatFieldMysql extends Mysql
                 // Process filters
                 $where = $query->clause('where');
                 if (!empty($where)) {
-                    $query->where($this->_filtersConverter($where, $query), [], true);
+                    // $query->where($this->_filtersConverter($where, $query), [], true);
+                    $this->_filtersConverter($where, $query);
                 }
             }
 
