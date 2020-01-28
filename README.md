@@ -59,7 +59,7 @@ Go to [CakePHP 3.x reference for loading plugin](https://book.cakephp.org/3.0/en
 
 You can then add `JsonBehavior` to tables and/or `JsonTrait` to entities.
 
-### Add JSON behavior to tables
+### Add DatField behavior to tables
 See [CakePHP 3.x reference for behaviors](https://book.cakephp.org/3.0/en/orm/behaviors.html#creating-a-behavior)
 ```php
 // App/Model/Table/UsersTable.php
@@ -71,24 +71,24 @@ class UsersTable extends Table
 {
     public function initialize(array $config)
     {
-        $this->addBehavior('Lqdt/OrmJson.json');
+        $this->addBehavior('Lqdt/OrmJson.DatField');
         // [...]
     }
 }
 ```
 
-### Add JSON Trait
+### Add DatField Trait
 See [CakePHP 3.x reference for traits](https://book.cakephp.org/3.0/en/orm/entities.html#creating-re-usable-code-with-traits)
 ```php
 // App/Model/Entity/User.php
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
-use Lqdt\OrmJson\Model\Entity\JsonTrait;
+use Lqdt\OrmJson\Model\Entity\DatFieldTrait;
 
 class User extends Entity
 {
-    use JsonTrait;
+    use DatFieldTrait;
 }
 ```
 
