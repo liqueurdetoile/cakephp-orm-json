@@ -38,54 +38,20 @@ class UsersFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => '1',
+                'id' => 1,
                 'attributes' => [
-                  "username" => 'test1',
-                  "email" => 'test1@liqueurdetoile.com',
-                  'group' => 1,
-                  "string" => 'string1',
-                  "integer" => 10,
-                  "boolean" => true,
-                  "null" => null,
-                  "decimal" => 1.2,
-                  "float" => 1.2E+5,
-                  "array" => [
-                    'a',
-                    'b'
-                  ],
-                  "object" => [
-                    'a' => 'a',
-                    'b' => 'b'
-                  ],
-                  "deep" => [
-                      "key" => "deepkey1"
-                  ]
+                  'role_id' => 'fab2e42a-8ebc-4d01-bedf-fc8edb5e83a3'
                 ]
             ],
             [
-                'id' => '2',
+                'id' => 2,
                 'attributes' => [
-                  "username" => "test2",
-                  "email" => "test2@liqueurdetoile.com",
-                  'group' => 1,
-                  "string" => "astring2",
-                  "integer" => 100,
-                  "boolean" => false
+                  'role_id' => 'dfaadf18-2edd-46eb-aef9-64743882a2dd'
                 ]
             ],
             [
-                'id' => '3',
-                'attributes' => [
-                  "username" => "test3",
-                  'group' => 2,
-                  "email" => "test3@liqueurdetoile.com",
-                  "boolean" => false,
-                  "null" => false,
-                  "float" => 1.2E+15,
-                  "deep" => [
-                      "key" => "deepkey2"
-                  ]
-                ]
+                'id' => 3,
+                'attributes' => []
             ]
         ];
         parent::init();
