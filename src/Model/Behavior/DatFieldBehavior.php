@@ -63,6 +63,11 @@ class DatFieldBehavior extends Behavior
             throw new Exception('DatField driver can only be used with Mysql');
         }
 
+        // Ensure driver is connected priro checking JSON support
+        if (!$driver->isConnected()) {
+            $driver->connect();
+        }
+
         if (!$driver->supportsNativeJson()) {
             throw new Exception('Your mysql server does not support JSON columns. Please upgrade to version 5.7.0 or above');
         }
