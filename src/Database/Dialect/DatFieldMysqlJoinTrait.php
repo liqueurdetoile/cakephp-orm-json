@@ -26,10 +26,10 @@ trait DatFieldMysqlJoinTrait
                     }
                 }
 
-                if ($expr instanceof Comparison) {
-                    $field = $expr->getField();
-                    $expr->setField(DatField::jsonFieldName($field, false, $alias));
-                }
+                // if ($expr instanceof Comparison) {
+                //     $field = $expr->getField();
+                //     $expr->setField(DatField::jsonFieldName($field, false, $alias));
+                // }
             });
         }
     }
