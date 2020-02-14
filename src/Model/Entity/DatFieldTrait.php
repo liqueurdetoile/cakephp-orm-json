@@ -30,14 +30,14 @@ trait DatFieldTrait
         $repository = TableRegistry::getTableLocator()->get($this->getSource());
         if ($repository->hasBehavior('Datfield') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
             $keys = $repository->getForeignKeys();
-            $properties = [];
+            $datprops = [];
             foreach ($keys as $key) {
                 extract($key);
                 $value = (new Dot($properties[$field]))->get($path);
                 $this[$property] = $value;
-                $properties[] = $property;
+                $datprops[] = $property;
             }
-            $this->setHidden($properties, true);
+            $this->setHidden($datprops, true);
         }
     }
 
