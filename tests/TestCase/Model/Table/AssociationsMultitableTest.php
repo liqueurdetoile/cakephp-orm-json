@@ -147,15 +147,15 @@ class AssociationsTest extends TestCase
         $this->Roles->hasMany('Users', [
           'className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable',
           'targetTable' => $this->Users,
-          'foreignKey' => 'role_id@Users.attributes'
+          'foreignKey' => 'role_id@attributes'
         ]);
 
-        $this->Roles->Users->registerForeignKey('role_id@Users.attributes');
+        $this->Users->registerForeignKey('role_id@attributes');
 
         $query = $this->Roles->find()->contain('Users');
         $roles = $query->all();
         foreach ($roles as $role) {
-            $this->assertTrue(is_array($role->users));
+            $this->assertNotEmpty($role->users);
             foreach ($role->users as $user) {
                 $this->assertEquals($role->id, $user->jsonGet('role_id@Users.attributes'));
             }
@@ -167,11 +167,11 @@ class AssociationsTest extends TestCase
         $this->Roles->hasMany('Users', [
           'className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable',
           'targetTable' => $this->Users,
-          'foreignKey' => 'role_id@Users.attributes',
+          'foreignKey' => 'role_id@attributes',
           'dependent' => true
         ]);
 
-        $this->Roles->Users->registerForeignKey('role_id@Users.attributes');
+        $this->Users->registerForeignKey('role_id@attributes');
 
         $role = $this->Roles->find()->contain('Users')->first();
         $users = $role->users;

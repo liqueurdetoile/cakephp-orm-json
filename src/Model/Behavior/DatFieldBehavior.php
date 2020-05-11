@@ -184,7 +184,7 @@ class DatFieldBehavior extends Behavior
             $model = $this->getTable()->getAlias();
         }
 
-        $property = $path . '@' . $model . '.' . $field;
+        $property = $path . '@' . $field;
 
         $fk = compact('field', 'path', 'property');
         if (!in_array($fk, $this->_foreignKeys)) {
