@@ -167,6 +167,8 @@ trait DatFieldMysqlWhereTrait
     protected function _convertStringData($expression, $field, $operator, $value)
     {
         $expression->setField($field);
+        $operator = strtolower($operator);
+        
         // LIKE and NOT LIKE comparison statements must be surrounded by "" to work
         if ($operator === 'like' || $operator === 'not like') {
             $expression->setValue('"' . $value . '"');
