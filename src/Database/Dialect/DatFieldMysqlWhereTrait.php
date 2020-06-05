@@ -166,12 +166,14 @@ trait DatFieldMysqlWhereTrait
 
     protected function _convertStringData($expression, $field, $operator, $value)
     {
-        $expression->setField($field);
         $operator = strtolower($operator);
-        
+
         // LIKE and NOT LIKE comparison statements must be surrounded by "" to work
         if ($operator === 'like' || $operator === 'not like') {
+            $expression->setField("CAST($field AS CHAR)"); // Need this to perform a case insensitice comparison
             $expression->setValue('"' . $value . '"');
+        } else {
+            $expression->setField($field);
         }
     }
 
