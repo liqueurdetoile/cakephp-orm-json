@@ -51,7 +51,7 @@ class AssociationsTest extends TestCase
         parent::tearDown();
     }
 
-    public function testBelongsToWithLeftJoin()
+    public function testBelongsTo()
     {
         $this->Users->belongsTo('Roles', [
           'className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable',
@@ -69,24 +69,6 @@ class AssociationsTest extends TestCase
             } else {
                 $this->assertEquals($role_id, $user->role->id);
             }
-        }
-    }
-
-    public function testBelongsToWithInnerJoin()
-    {
-        $this->Users->belongsTo('Roles', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable',
-          'targetTable' => $this->Roles,
-          'foreignKey' => 'role_id@attributes',
-          'joinType' => 'INNER'
-        ]);
-
-        $query = $this->Users->find()->contain('Roles');
-        $users = $query->all();
-        $this->assertEquals(2, count($users));
-        foreach ($users as $user) {
-            $role_id = $user->jsonGet('role_id@attributes');
-            $this->assertEquals($role_id, $user->role->id);
         }
     }
 

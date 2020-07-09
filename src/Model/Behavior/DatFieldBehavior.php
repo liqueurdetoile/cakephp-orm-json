@@ -176,6 +176,20 @@ class DatFieldBehavior extends Behavior
         return $this->getTable();
     }
 
+    public function hasDatMany(string $alias, array $options)
+    {
+        $fk = $options['foreignKey'] ?? null;
+
+        if (empty($fk)) {
+            throw new Exception('Foreign key must be set with hasDatMany');
+        }
+
+        $this->getTable()->hasMany($alias, $options);
+        if (DatField::isDatField($fk)) {
+            $this->getTable()->$alias->registerForeignKey($fk);
+        }
+    }
+
     public function registerForeignKey(string $field, string $path = null)
     {
         if (DatField::isDatField($field)) {

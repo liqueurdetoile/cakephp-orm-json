@@ -1,5 +1,5 @@
 <?php
-namespace Lqdt\OrmJson\Test\TestCase\Model\Behavior;
+namespace Lqdt\OrmJson\Test\TestCase\Database\Driver;
 
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;

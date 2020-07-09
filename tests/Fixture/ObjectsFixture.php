@@ -10,6 +10,7 @@ class ObjectsFixture extends TestFixture
 {
     public $connection = 'test';
     public $table = 'objects';
+    
     /**
      * Fields
      *

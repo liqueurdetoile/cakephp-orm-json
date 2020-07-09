@@ -4,42 +4,39 @@ namespace Lqdt\OrmJson\Database\Dialect;
 use Cake\Core\Exception\Exception;
 use Cake\Database\ExpressionInterface;
 use Cake\Database\Expression\Comparison;
+use Cake\Database\Expression\IdentifierExpression;
 use Cake\Database\Expression\QueryExpression;
 use Cake\Database\Expression\UnaryExpression;
 use Cake\Database\Query;
 use Lqdt\OrmJson\Utility\DatField;
 
-trait DatFieldMysqlWhereTrait
+trait DatFieldMysqlExpressionConverterTrait
 {
-    /**
-     * Parse where expressions and update JSON fields
-     *
-     * @version 2.0.0
-     * @since   2.0.0
-     * @param   string|ExpressionInterface      $expression Incoming expression
-     */
-    protected function _filtersConverter($expression, Query $query)
+    public function convertExpression($expression, Query $query)
     {
-        // Weird case though always possible
         if (is_string($expression)) {
             return $this->_rawSqlConverter($expression, $query);
         }
 
-        // Catch SQL fragments at top level
-        if ($expression instanceof QueryExpression) {
-            $this->_queryExpressionConverter($expression, $query);
+        if ($expression instanceof IdentifierExpression) {
+            return $this->_identifierExpressionConverter($expression, $query);
         }
 
-        // Process inner expressions
-        $expression->traverse(function ($expr) use ($query) {
-            if ($expr instanceof Comparison) {
-                $this->_comparisonConverter($expr, $query);
-            }
+        if ($expression instanceof Comparison) {
+            return $this->_comparisonConverter($expression, $query);
+        }
 
-            if ($expr instanceof QueryExpression) {
-                $this->_queryExpressionConverter($expr, $query);
-            }
-        });
+        if ($expression instanceof QueryExpression) {
+            return $this->_queryExpressionConverter($expression, $query);
+        }
+
+        if ($expression instanceof ExpressionInterface) {
+            $expression->traverse(function ($e) use ($query) {
+                $this->convertExpression($e, $query);
+            });
+        }
+
+        return $expression;
     }
 
     /**
@@ -55,6 +52,22 @@ trait DatFieldMysqlWhereTrait
         return DatField::jsonFieldsNameinString($expression);
     }
 
+    protected function _identifierExpressionConverter(IdentifierExpression $expression, Query $query)
+    {
+        $field = $expression->getIdentifier();
+
+        if (DatField::isDatField($field)) {
+            // Fetch model from field value
+            $parts = explode('.', $field);
+            $model = array_shift($parts);
+            $field = implode('.', $parts);
+            $field = DatField::jsonFieldName($field, false, $model);
+            $expression->setIdentifier($field);
+        }
+
+        return $expression;
+    }
+
     /**
      * Iterates over a QueryExpression to parse datfields in SQL fragments
      * Expressions are left unchanged as they'll be processed later when traversing the expression
@@ -66,13 +79,11 @@ trait DatFieldMysqlWhereTrait
      */
     protected function _queryExpressionConverter(QueryExpression $expression, Query $query)
     {
-        $expression->iterateParts(function ($condition, $key) use ($query) {
-            if (is_string($condition)) {
-                return $this->_rawSqlConverter($condition, $query);
-            }
-
-            return $condition;
+        $expression->iterateParts(function ($expr, $key) use ($query) {
+            return $this->convertExpression($expr, $query);
         });
+
+        return $expression;
     }
 
     /**
@@ -93,7 +104,7 @@ trait DatFieldMysqlWhereTrait
         $field = $expression->getField();
 
         if ($field instanceof ExpressionInterface) {
-            return;
+            return $expression;
         }
 
         if (DatField::isDatField($field)) {
@@ -101,37 +112,39 @@ trait DatFieldMysqlWhereTrait
             $operator = $expression->getOperator();
             $value = $expression->getValue();
 
+            if ($value instanceof ExpressionInterface) {
+                $expression->setField($field);
+                $expression->setValue($this->convertExpression($value, $query));
+
+                return $expression;
+            }
+
             if (is_null($value)) {
-                $this->_convertNullData($expression, $field, $operator, $value, $query);
-                return;
+                return $this->_convertNullData($expression, $field, $operator, $value, $query);
             }
 
             switch (gettype($value)) {
               case 'boolean':
-                $this->_convertBooleanData($expression, $field, $operator, $value, $query);
-                return;
+                return $this->_convertBooleanData($expression, $field, $operator, $value, $query);
 
               case 'string':
-                $this->_convertStringData($expression, $field, $operator, $value, $query);
-                return;
+                return $this->_convertStringData($expression, $field, $operator, $value, $query);
 
               case 'integer':
-                $this->_convertIntegerData($expression, $field, $operator, $value, $query);
-                return;
+                return $this->_convertIntegerData($expression, $field, $operator, $value, $query);
 
               case 'double':
-                $this->_convertDoubleData($expression, $field, $operator, $value, $query);
-                return;
+                return $this->_convertDoubleData($expression, $field, $operator, $value, $query);
 
               case 'array':
                 return $this->_convertArrayData($expression, $field, $operator, $value, $query);
+
               default:
                 throw new Exception('Unsupported type for value : ' . gettype($value));
-              break;
             }
         }
 
-        return;
+        return $expression;
     }
 
     protected function _convertNullData($expression, $field, $operator, $value, $query)
@@ -139,6 +152,8 @@ trait DatFieldMysqlWhereTrait
         $expression->setField($field);
         $expression->setOperator('=');
         $expression->setValue($query->newExpr("CAST('null' AS JSON)"));
+
+        return $expression;
     }
 
     protected function _convertBooleanData($expression, $field, $operator, $value, $query)
@@ -162,6 +177,8 @@ trait DatFieldMysqlWhereTrait
         $expression->setField($field);
         $expression->setOperator($cleanoperator);
         $expression->setValue($query->newExpr($value ? 'true': 'false'));
+
+        return $expression;
     }
 
     protected function _convertStringData($expression, $field, $operator, $value)
@@ -175,12 +192,16 @@ trait DatFieldMysqlWhereTrait
         } else {
             $expression->setField($field);
         }
+
+        return $expression;
     }
 
     protected function _convertIntegerData($expression, $field, $operator, $value, $query)
     {
         $expression->setField($field);
         $expression->setValue($query->newExpr((string) $value));
+
+        return $expression;
     }
 
     /**
@@ -230,6 +251,8 @@ trait DatFieldMysqlWhereTrait
         $expression->setField($field);
         $expression->setOperator($cleanoperator);
         $expression->setValue($query->newExpr((string) $value));
+
+        return $expression;
     }
 
     protected function _convertArrayData($expression, $field, $operator, $value, $query)
@@ -250,10 +273,8 @@ trait DatFieldMysqlWhereTrait
           case 'in':
           case 'IN':
             $value = array_values($value);
-            $expression->setField("JSON_CONTAINS(CAST('" . json_encode($value) . "' AS JSON), " . $field . ")");
-            $expression->setOperator('=');
-            $expression->setValue($query->newExpr('1'));
-            return;
+
+            return new Comparison("JSON_CONTAINS(CAST('" . json_encode($value) . "' AS JSON), " . $field . ")", 1, 'integer', '=');
           default:
             throw new Exception('Unsupported operator ' . $operator . ' with OBJECT/ARRAY data type');
         }
@@ -261,5 +282,7 @@ trait DatFieldMysqlWhereTrait
         $expression->setField($field);
         $expression->setOperator($cleanoperator);
         $expression->setValue($query->newExpr("CAST('" . json_encode($value) . "' AS JSON)"));
+
+        return $expression;
     }
 }

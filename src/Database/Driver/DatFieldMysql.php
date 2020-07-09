@@ -3,48 +3,52 @@ namespace Lqdt\OrmJson\Database\Driver;
 
 use Cake\Database\Driver\Mysql;
 use Cake\Database\Expression\Comparison;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlJoinTrait;
+use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlExpressionConverterTrait;
 use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlOrderTrait;
 use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlSelectTrait;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlWhereTrait;
 
 class DatFieldMysql extends Mysql
 {
-    use DatFieldMysqlJoinTrait;
+    use DatFieldMysqlExpressionConverterTrait;
     use DatFieldMysqlOrderTrait;
     use DatFieldMysqlSelectTrait;
-    use DatFieldMysqlWhereTrait;
 
     public function queryTranslator($type)
     {
         return function ($query) use ($type) {
-            $repository = $query->getRepository();
+            try {
+                $repository = $query->getRepository();
 
-            if ($repository->hasBehavior('Datfield') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
-                // Process order
-                $order = $query->clause('order');
-                if (!empty($order)) {
-                    $this->_orderedFieldsConverter($order, $query);
-                }
+                if ($repository->hasBehavior('Datfield') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
+                    // Process order
+                    $order = $query->clause('order');
+                    if (!empty($order)) {
+                        $this->_orderedFieldsConverter($order, $query);
+                    }
 
-                // Process select
-                $select = $query->clause('select');
-                if (!empty($select)) {
-                    $query->select($this->_selectedFieldsConverter($select, $query), true);
-                }
+                    // Process select
+                    $select = $query->clause('select');
+                    if (!empty($select)) {
+                        $query->select($this->_selectedFieldsConverter($select, $query), true);
+                    }
 
-                // Process joins
-                $joints = $query->clause('join');
-                if (!empty($joints)) {
-                    $this->_joinedFieldsConverter($joints, $query);
-                }
+                    // Process joins
+                    $joints = $query->clause('join');
+                    if (!empty($joints)) {
+                        foreach ($joints as $joint) {
+                            $joint['conditions']->traverse(function ($e) use ($query) {
+                                $this->convertExpression($e, $query);
+                            });
+                        }
+                    }
 
-                // Process filters
-                $where = $query->clause('where');
-                if (!empty($where)) {
-                    // $query->where($this->_filtersConverter($where, $query), [], true);
-                    $this->_filtersConverter($where, $query);
+                    // Process filters
+                    $where = $query->clause('where');
+                    if (!empty($where)) {
+                        $this->convertExpression($where, $query);
+                    }
                 }
+            } catch (\Error $err) {
             }
 
             // Apply parent driver translator transformations
@@ -58,6 +62,7 @@ class DatFieldMysql extends Mysql
     public function prepare($query)
     {
         if ($query instanceof \Cake\ORM\Query) {
+            // debug($query);
             // debug($query->sql());
         }
         return parent::prepare($query);

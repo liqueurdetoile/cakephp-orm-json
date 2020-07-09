@@ -4,7 +4,7 @@ namespace Lqdt\OrmJson\Test\Fixture;
 use Cake\TestSuite\Fixture\TestFixture;
 
 /**
- * UsersFixture
+ * Users fixture
  */
 class UsersFixture extends TestFixture
 {
