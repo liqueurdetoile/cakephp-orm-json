@@ -38,7 +38,9 @@
         "fzaninotto/faker": "^1.9",
         "phpunit/phpunit": "^5.7.14|^6.0",
         "phpunit/php-code-coverage": "5.3",
-        "phpstan/phpstan": "^0.10.1"
+        "phpstan/phpstan": "^0.12",
+        "raul338/cakephp-phpstan-extensions": "^2.1",
+        "phpstan/extension-installer": "^1.1"
     },
     "autoload": {
         "psr-4": {
@@ -52,8 +54,8 @@
         }
     },
     "scripts": {
-        "test": "phpunit && phpstan analyse -l 5 src",
+        "test": "phpunit && phpstan analyze --memory-limit 1G",
         "doc": "php phpDocumentor.phar -d ./src -t ./docs",
-        "phpstan": "phpstan analyse -l 5 src"
+        "stan": "phpstan analyze --memory-limit 1G"
     }
 }

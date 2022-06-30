@@ -1,0 +1,11 @@
+parameters:
+    level: 7
+    bootstrapFiles:
+        - vendor/cakephp/cakephp/tests/bootstrap.php
+    checkMissingIterableValueType: false
+    treatPhpDocTypesAsCertain: false
+    checkGenericClassInNonGenericObjectType: false
+    paths:
+        - src
+    excludes_analyse:
+        - src/Console/Installer.php
