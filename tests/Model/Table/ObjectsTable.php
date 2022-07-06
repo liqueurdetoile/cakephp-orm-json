@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Lqdt\OrmJson\Test\Model\Table;
 
 use Cake\Event\Event;
@@ -9,18 +11,17 @@ class ObjectsTable extends Table
 {
     protected $_conditions;
 
-    public function initialize(array $config)
+    public function initialize(array $config): void
     {
         parent::initialize($config);
         $this->addBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior');
-        $this->setEntityClass('Lqdt\OrmJson\Test\Model\Entity\ObjectEntity');
 
         if (!empty($config['conditions'])) {
             $this->_conditions = $config['conditions'];
         }
     }
 
-    public function beforeFind(Event $event, Query $query) : Query
+    public function beforeFind(Event $event, Query $query): Query
     {
         if (!empty($this->_conditions)) {
             $query->where($this->_conditions);

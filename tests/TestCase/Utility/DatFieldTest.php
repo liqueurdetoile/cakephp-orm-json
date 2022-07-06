@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Lqdt\OrmJson\Test\TestCase\Datasource;
 
 use Cake\TestSuite\TestCase;
@@ -13,11 +15,13 @@ class DatFieldTest extends TestCase
           ['field', false],
           ['Model.field', false],
           ['attribute@field', true],
-          ['attribute@Model.field', true]
+          ['attribute@Model.field', true],
         ];
     }
 
-    /** @dataProvider isDatFieldData */
+    /**
+     * @dataProvider isDatFieldData
+     */
     public function testIsDatField($field, $expected)
     {
         $this->assertEquals($expected, DatField::isDatField($field));
@@ -38,7 +42,9 @@ class DatFieldTest extends TestCase
         ];
     }
 
-    /** @dataProvider getDatFieldPartsData */
+    /**
+     * @dataProvider getDatFieldPartsData
+     */
     public function testGetDatFieldParts($datfield, $expected, $repository = null)
     {
         $this->assertEquals($expected, DatField::getDatFieldParts($datfield, $repository));
@@ -56,7 +62,9 @@ class DatFieldTest extends TestCase
         ];
     }
 
-    /** @dataProvider jsonFieldNameData */
+    /**
+     * @dataProvider jsonFieldNameData
+     */
     public function testJsonFieldName($field, $expected, $unquote = false, $repository = null)
     {
         $this->assertEquals($expected, DatField::jsonFieldName($field, $unquote, $repository));
@@ -70,7 +78,9 @@ class DatFieldTest extends TestCase
         ];
     }
 
-    /** @dataProvider buildAliasFromTemplateData */
+    /**
+     * @dataProvider buildAliasFromTemplateData
+     */
     public function testBuildAliasFromTemplate($datfield, $template, $separator, $expected)
     {
         $this->assertEquals($expected, DatField::buildAliasFromTemplate($datfield, $template, $separator));
