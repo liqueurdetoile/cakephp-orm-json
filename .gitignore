@@ -7,3 +7,5 @@ phpDocumentor.phar
 node_modules
 package-lock.json
 package.json
+.phpunit.result.cache
+logs

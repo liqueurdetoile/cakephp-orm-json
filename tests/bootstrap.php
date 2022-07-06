@@ -1,4 +1,8 @@
 <?php
+declare(strict_types=1);
+
+use Migrations\TestSuite\Migrator;
+
 /**
  * Test suite bootstrap for PluginTemplate.
  *
@@ -7,11 +11,11 @@
  * installed as a dependency of an application.
  */
 $dsn = env('TRAVIS', false) ?
-  //'mysql://root:datpassword@localhost/cakeormjson_test' :
-  'mysql://root@localhost/cakeormjson_test' :
+  'mysql://root:root@localhost/cakeormjson_test' :
   'mysql://root@localhost/cakeormjson_test';
 
-putenv('db_dsn=' . $dsn);
+putenv('DB_URL=' . $dsn);
+putenv('TESTING=1');
 
 $findRoot = function ($root) {
     do {
@@ -22,16 +26,18 @@ $findRoot = function ($root) {
         }
     } while ($root !== $lastRoot);
 
-    throw new Exception("Cannot find the root of the application, unable to run tests");
+    throw new Exception('Cannot find the root of the application, unable to run tests');
 };
+
 $root = $findRoot(__FILE__);
 unset($findRoot);
 
-chdir($root);
-
 if (file_exists($root . '/config/bootstrap.php')) {
-    require $root . '/config/bootstrap.php';
-
-    return;
+    include $root . '/config/bootstrap.php';
+} else {
+    include $root . '/vendor/cakephp/cakephp/tests/bootstrap.php';
 }
-require $root . '/vendor/cakephp/cakephp/tests/bootstrap.php';
+
+// Run migrations
+$migrator = new Migrator();
+$migrator->run([], false);

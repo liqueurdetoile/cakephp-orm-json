@@ -29,18 +29,20 @@
       "filter"
     ],
     "require": {
-        "php": "^7.1",
+        "php": "^7.1|^8.0",
         "cakephp/cakephp": "^3.5|^4",
         "adbario/php-dot-notation": "^2.0",
         "mustache/mustache": "^2.13"
     },
     "require-dev": {
         "fzaninotto/faker": "^1.9",
-        "phpunit/phpunit": "^5.7.14|^6.0",
-        "phpunit/php-code-coverage": "5.3",
+        "phpunit/phpunit": "^8.5 || ^9.3",
         "phpstan/phpstan": "^0.12",
         "raul338/cakephp-phpstan-extensions": "^2.1",
-        "phpstan/extension-installer": "^1.1"
+        "phpstan/extension-installer": "^1.1",
+        "cakephp/cakephp-codesniffer": "^4.5",
+        "cakephp/migrations": "@stable",
+        "vierge-noire/cakephp-test-suite-light": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -57,5 +59,11 @@
         "test": "phpunit && phpstan analyze --memory-limit 1G",
         "doc": "php phpDocumentor.phar -d ./src -t ./docs",
         "stan": "phpstan analyze --memory-limit 1G"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
     }
 }
