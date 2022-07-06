@@ -6,7 +6,7 @@ use Cake\TestSuite\Fixture\TestFixture;
 /**
  * Profiles Fixture
  */
-class ProfilesFixture extends TestFixture
+class ParentsFixture extends TestFixture
 {
     /**
      * Init method
@@ -17,18 +17,19 @@ class ProfilesFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => 1,
+                'id' => '26145a1-37e6-471f-83eb-ac5a253f4e00',
                 'attributes' => [
-                  'user_id' => 3
+                  'name' => 'parent1',
                 ]
             ],
             [
-                'id' => 2,
+                'id' => '26145a1-37e6-471f-83eb-ac5a253f4e01',
                 'attributes' => [
-                  'user_id' => 1
+                  'name' => 'parent2',
                 ]
             ]
         ];
+
         parent::init();
     }
 }

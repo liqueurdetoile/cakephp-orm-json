@@ -8,33 +8,12 @@ use Cake\TestSuite\Fixture\TestFixture;
  */
 class SortObjectsFixture extends TestFixture
 {
-    public $connection = 'test';
-    public $table = 'objects';
-    /**
-     * Fields
-     *
-     * @var array
-     */
-    // @codingStandardsIgnoreStart
-    public $fields = [
-        'id' => ['type' => 'integer', 'length' => null, 'null' => false, 'default' => null, 'comment' => '', 'precision' => null],
-        'attributes' => ['type' => 'json', 'length' => null, 'null' => true, 'default' => null, 'comment' => '', 'precision' => null],
-        '_constraints' => [
-            'primary' => ['type' => 'primary', 'columns' => ['id'], 'length' => []]
-        ],
-        '_options' => [
-            'engine' => 'InnoDB',
-            'collation' => 'utf8_general_ci'
-        ],
-    ];
-    // @codingStandardsIgnoreEnd
-
     /**
      * Init method
      *
      * @return void
      */
-    public function init()
+    public function init(): void
     {
         $this->records = [
             [
