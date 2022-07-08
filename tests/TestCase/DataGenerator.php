@@ -28,11 +28,11 @@ class DataGenerator
     /**
      * Initializes trait and seeds faker instance to allow consistency generation between tests
      */
-    public function __construct()
+    public function __construct(int $seed = 0)
     {
         $this->faker = Factory::create();
         $this->scheme = new Dot();
-        $this->seed(0);
+        $this->seed($seed);
     }
 
     /**
