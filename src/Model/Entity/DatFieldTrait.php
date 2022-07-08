@@ -10,11 +10,12 @@ declare(strict_types=1);
 namespace Lqdt\OrmJson\Model\Entity;
 
 use Adbar\Dot;
-use Cake\ORM\TableRegistry;
-use Lqdt\OrmJson\Utility\DatField;
+use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
 
 /**
  * This trait adds useful methods to get and set values in JSON fields
+ *
+ * It superseded regular magic function to include json functions
  *
  * All methods can safely be called on regular fields
  *
@@ -25,32 +26,53 @@ use Lqdt\OrmJson\Utility\DatField;
  */
 trait DatFieldTrait
 {
-    /**
-     * Test
-     *
-     * @param array $properties  Properties
-     * @param array $options     Options
-     */
-    public function __construct(array $properties = [], array $options = [])
-    {
-        parent::__construct($properties, $options);
+    use DatFieldAwareTrait;
 
-        // Process foreign keys and expose it as entity property to allow ORM EagerLoder to link data
-        $repository = TableRegistry::getTableLocator()->get($this->getSource());
-        if (
-            $repository->hasBehavior('Datfield')
-            || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')
-        ) {
-            $keys = $repository->getForeignKeys();
-            $datprops = [];
-            foreach ($keys as $key) {
-                extract($key);
-                $value = (new Dot($properties[$field]))->get($path);
-                $this[$property] = $value;
-                $datprops[] = $property;
-            }
-            $this->setHidden($datprops, true);
-        }
+    /**
+     * Magic getter to access fields that have been set in this entity
+     *
+     * @param string $field Name of the field to access
+     * @return mixed
+     */
+    public function &__get(string $field)
+    {
+        return $this->jsonGet($field);
+    }
+
+    /**
+     * Magic setter to add or edit a field in this entity
+     *
+     * @param string $field The name of the field to set
+     * @param mixed $value The value to set to the field
+     * @return void
+     */
+    public function __set(string $field, $value): void
+    {
+        $this->isDatField($field) ? $this->jsonSet($field, $value) : $this->set($field, $value);
+    }
+
+    /**
+     * Returns whether this entity contains a field named $field
+     * and is not set to null.
+     *
+     * @param string $field The field to check.
+     * @return bool
+     * @see \Cake\ORM\Entity::has()
+     */
+    public function __isset(string $field): bool
+    {
+        return $this->isDatField($field) ? $this->jsonIsset($field) : $this->has($field);
+    }
+
+    /**
+     * Removes a field from this entity
+     *
+     * @param string $field The field to unset
+     * @return void
+     */
+    public function __unset(string $field): void
+    {
+        $this->isDatField($field) ? $this->jsonUnset($field) : $this->unset($field);
     }
 
     /**
@@ -62,8 +84,8 @@ trait DatFieldTrait
      */
     public function &jsonGet(string $datfield)
     {
-        if (DatField::isDatField($datfield)) {
-            $parts = DatField::getDatFieldParts($datfield, $this->getSource());
+        if ($this->isDatField($datfield)) {
+            $parts = $this->parseDatField($datfield, $this->getSource());
             $path = explode('.', $parts['path']);
             $data = $this->get($parts['field']);
             foreach ($path as $node) {
@@ -99,8 +121,8 @@ trait DatFieldTrait
             return $this;
         }
 
-        if (DatField::isDatField($datfield)) {
-            $parts = DatField::getDatFieldParts($datfield, $this->getSource());
+        if ($this->isDatField($datfield)) {
+            $parts = $this->parseDatField($datfield, $this->getSource());
             $fieldData = new Dot($this->get($parts['field']));
             $fieldData->set($parts['path'], $value);
             $this->set($parts['field'], $fieldData->all());
@@ -119,8 +141,8 @@ trait DatFieldTrait
      */
     public function jsonIsset(string $datfield): bool
     {
-        if (DatField::isDatField($datfield)) {
-            $parts = DatField::getDatFieldParts($datfield, $this->getSource());
+        if ($this->isDatField($datfield)) {
+            $parts = $this->parseDatField($datfield, $this->getSource());
             $fieldData = new Dot($this->get($parts['field']));
 
             return $fieldData->has($parts['path']);
@@ -140,8 +162,8 @@ trait DatFieldTrait
         $datfields = (array)$datfield;
 
         foreach ($datfields as $datfield) {
-            if (DatField::isDatField($datfield)) {
-                $parts = DatField::getDatFieldParts($datfield, $this->getSource());
+            if ($this->isDatField($datfield)) {
+                $parts = $this->parseDatField($datfield, $this->getSource());
                 $fieldData = new Dot($this->get($parts['field']));
                 $fieldData->delete($parts['path']);
                 $this->set($parts['field'], $fieldData->all());

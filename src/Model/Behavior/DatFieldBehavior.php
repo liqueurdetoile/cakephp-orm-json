@@ -11,7 +11,6 @@ namespace Lqdt\OrmJson\Model\Behavior;
 
 use Adbar\Dot;
 use ArrayObject;
-use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
 use Cake\Database\Connection;
 use Cake\Database\Driver\Mysql;
@@ -23,8 +22,8 @@ use Cake\ORM\Behavior;
 use Cake\ORM\Table;
 use CakephpTestSuiteLight\Sniffer\MysqlTriggerBasedTableSniffer;
 use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
+use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
 use Lqdt\OrmJson\ORM\ObjectEntity;
-use Lqdt\OrmJson\Utility\DatField;
 
 /**
  * This CakePHP behavior adds support to performs mysql queries into JSON fields
@@ -42,6 +41,8 @@ use Lqdt\OrmJson\Utility\DatField;
  */
 class DatFieldBehavior extends Behavior
 {
+    use DatFieldAwareTrait;
+
     /**
      * Default options for manipulating json data
      *
@@ -50,6 +51,7 @@ class DatFieldBehavior extends Behavior
     protected $_defaultOptions = [
       'jsonReplace' => false,
       'keepJsonNested' => false,
+      'jsonDateTimeTemplate' => 'Y-m-d M:m:s',
       'jsonPropertyTemplate' => '{{field}}{{separator}}{{path}}',
       'jsonSeparator' => '_',
       'parseJsonAsObject' => false,
@@ -111,8 +113,6 @@ class DatFieldBehavior extends Behavior
 
             // Edge case where driver have been statically configured in config
             if ($driver instanceof DatFieldMysql) {
-                Configure::write('Lqdt.CakephpOrmJson.configured', true);
-
                 return;
             }
 
@@ -195,9 +195,9 @@ class DatFieldBehavior extends Behavior
 
         foreach ($map as $field => $value) {
             // Convert datfield and parse dotfield
-            if (DatField::isDatField($field)) {
-                $path = DatField::buildAliasFromTemplate($field, '{{field}}.{{path}}', '.');
-                $fieldname = DatField::getDatFieldPart('field', $field, '{{field}}', '.');
+            if ($this->isDatField($field)) {
+                $path = $this->renderFromDatFieldAndTemplate($field, '{{field}}.{{path}}', '.');
+                $fieldname = $this->getDatFieldPart('field', $field, '{{field}}', '.');
                 $replace = $this->getJsonFieldConfig($fieldname, (array)$options, 'jsonReplace');
                 $dot->set($path, $value);
                 $data->offsetUnset($field);
