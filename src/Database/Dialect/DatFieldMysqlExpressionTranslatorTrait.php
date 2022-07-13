@@ -311,7 +311,7 @@ trait DatFieldMysqlExpressionTranslatorTrait
         }
 
         // Simply process value in other cases
-        $value->setValue($this->translateExpression($datfield, $query));
+        $value->setValue($value, $this->translateExpression($datfield, $query));
 
         return $expression;
     }
