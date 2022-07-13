@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\ORM;
 
+use Adbar\Dot;
 use Mustache_Engine;
 
 /**
@@ -13,6 +14,51 @@ use Mustache_Engine;
  */
 trait DatFieldAwareTrait
 {
+    /**
+     * Reads the datfield value in data. target data should not be nested
+     *
+     * @param  string $key Datfield
+     * @param  array|\Lqdt\OrmJson\ORM\Entity $data Data
+     * @return mixed
+     */
+    public function getDatFieldValueInData(string $key, $data)
+    {
+        // Regular field, simply map
+        if (!$this->isDatField($key)) {
+            return $data[$key];
+        }
+
+        if (is_array($data)) {
+            ['field' => $field, 'path' => $path] = $this->parseDatField($key);
+            $path = implode('.', [$field,$path]);
+            $dot = new Dot($data);
+
+            return $dot->get($path);
+        } else {
+            // Entity case, we can use getter
+            return $data->{$key};
+        }
+    }
+
+    /**
+     * Return the requested part in datfield among `model`, `field` and `path`
+     *
+     * @param  string      $part       Datfield part
+     * @param  string      $datfield   Datfield
+     * @param  string|null $repository Repository name
+     * @return string|null
+     */
+    public function getDatFieldPart(string $part, string $datfield, ?string $repository = null): ?string
+    {
+        if (!in_array($part, ['model', 'field', 'path'])) {
+            throw new \Exception('Requested part in DatField is not valid');
+        }
+
+        $parsed = $this->parseDatField($datfield, $repository);
+
+        return $parsed[$part];
+    }
+
     /**
      * Utility function to check if a field is datfield and know its structure
      *
@@ -120,46 +166,40 @@ trait DatFieldAwareTrait
     }
 
     /**
-     * Return the requested part in datfield among `model`, `field` and `path`
-     *
-     * @param  string      $part       Datfield part
-     * @param  string      $datfield   Datfield
-     * @param  string|null $repository Repository name
-     * @return string|null
-     */
-    public function getDatFieldPart(string $part, string $datfield, ?string $repository = null): ?string
-    {
-        if (!in_array($part, ['model', 'field', 'path'])) {
-            throw new \Exception('Requested part in DatField is not valid');
-        }
-
-        $parsed = $this->parseDatField($datfield, $repository);
-
-        return $parsed[$part];
-    }
-
-    /**
      * Buils an alias from a template
      *
-     * @param  string      $datField   Datfield
+     * @param  string      $datfield   Datfield
      * @param  string      $template   Template
      * @param  string      $separator  Separator
      * @param  string|null $repository Repository name
      * @return string             [description]
      */
     public function renderFromDatFieldAndTemplate(
-        string $datField,
+        string $datfield,
         string $template,
         string $separator = '_',
         ?string $repository = null
     ): string {
-        $parts = $this->parseDatField($datField, $repository);
+        $parts = $this->parseDatField($datfield, $repository);
         $parts['path'] = str_replace('.', $separator, $parts['path']);
         $parts['separator'] = $separator;
         $parts['sep'] = $separator;
         $mustache = new Mustache_Engine();
 
         return $mustache->render($template, $parts);
+    }
+
+    /**
+     * Returns the key to store field state in entity as both V1 and V2 notation can be used
+     *
+     * @param  string|null $datfield   Datfield
+     * @return string|null Key for datfield
+     */
+    protected function _getDatFieldKey(?string $datfield): ?string
+    {
+        return $this->isDatField($datfield) ?
+          $this->renderFromDatFieldAndTemplate($datfield, '{{field}}{{separator}}{{path}}') :
+          $datfield;
     }
 
     /**
