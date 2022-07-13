@@ -20,10 +20,9 @@ use Cake\Event\EventInterface;
 use Cake\Log\Log;
 use Cake\ORM\Behavior;
 use Cake\ORM\Table;
-use CakephpTestSuiteLight\Sniffer\MysqlTriggerBasedTableSniffer;
 use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
 use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
-use Lqdt\OrmJson\ORM\ObjectEntity;
+use Lqdt\OrmJson\ORM\JsonEntity;
 
 /**
  * This CakePHP behavior adds support to performs mysql queries into JSON fields
@@ -54,7 +53,6 @@ class DatFieldBehavior extends Behavior
       'jsonDateTimeTemplate' => 'Y-m-d M:m:s',
       'jsonPropertyTemplate' => '{{field}}{{separator}}{{path}}',
       'jsonSeparator' => '_',
-      'parseJsonAsObject' => false,
     ];
 
     /**
@@ -71,7 +69,7 @@ class DatFieldBehavior extends Behavior
 
     /**
      * At initialization the behavior will check current connection driver nad upgrades it if needed.
-     * It also sets up default entity class as ObjectEntity to includes behavior on fallback
+     * It also sets up default entity class as JsonEntity to includes behavior on fallback
      *
      * If current connection driver is not DatFieldMysql, it will upgrade it.
      *
@@ -82,7 +80,7 @@ class DatFieldBehavior extends Behavior
      */
     public function initialize(array $config): void
     {
-        $this->getTable()->setEntityClass(ObjectEntity::class);
+        $this->getTable()->setEntityClass(JsonEntity::class);
         $this->_upgradeConnection($this->getTable()->getConnection());
     }
 
@@ -153,15 +151,6 @@ class DatFieldBehavior extends Behavior
                 ]
             );
 
-            /**
-             * Adds table sniffer when in unit testing
-             *
-             * @see https://github.com/vierge-noire/cakephp-test-suite-light
-             */
-            if (getenv('TESTING') === '1') {
-                $config['tableSniffer'] = MysqlTriggerBasedTableSniffer::class;
-            }
-
             ConnectionManager::setConfig($name, $config);
             /**
              * @var \Cake\Database\Connection $connection
@@ -230,6 +219,7 @@ class DatFieldBehavior extends Behavior
         \ArrayObject $data,
         \ArrayObject $options
     ): void {
+        // Merge data
         $keys = $options->offsetGet('jsonFieldsToMerge');
         $original = $entity->getOriginalValues();
 
@@ -325,111 +315,5 @@ class DatFieldBehavior extends Behavior
     public function getTable(): Table
     {
         return method_exists($this, 'table') ? $this->table() : $this->getTable();
-    }
-
-    public function getExtractOnSelect(): bool
-    {
-        return $this->_extractOnSelect;
-    }
-
-    public function setExtractOnSelect(bool $extract): Table
-    {
-        $this->_extractOnSelect = $extract;
-
-        return $this->getTable();
-    }
-
-    public function getKeepNestedOnExtract(): bool
-    {
-        return $this->_keepNestedOnExtract;
-    }
-
-    public function getExtractAliasSeparator(): string
-    {
-        return $this->_extractAliasSeparator;
-    }
-
-    /**
-     * Set seprator when extracting json data into a field
-     *
-     * Passing false will reset it to default
-     *
-     * @param  string|bool $separator Separator
-     * @return \Cake\ORM\Table
-     */
-    public function setExtractAliasSeparator($separator): Table
-    {
-        if (is_bool($separator)) {
-            $this->_keepNestedOnExtract = true;
-            $this->_extractAliasSeparator = '\.';
-        } else {
-            $this->_keepNestedOnExtract = false;
-            $this->_extractAliasSeparator = $separator === '.' ? '\.' : $separator;
-        }
-
-        return $this->getTable();
-    }
-
-    public function isExtractAliasLowercased(): bool
-    {
-        return $this->_extractAliasLowercased;
-    }
-
-    public function setExtractAliasLowercased(bool $lowercased): Table
-    {
-        $this->_extractAliasLowercased = $lowercased;
-
-        return $this->getTable();
-    }
-
-    public function getExtractAliasTemplate(): string
-    {
-        return $this->_extractAliasTemplate;
-    }
-
-    public function setExtractAliasTemplate(string $template): Table
-    {
-        $this->_extractAliasTemplate = $template;
-
-        return $this->getTable();
-    }
-
-    public function hasDatMany(string $alias, array $options): Table
-    {
-        $fk = $options['foreignKey'] ?? null;
-
-        if (empty($fk)) {
-            throw new Exception('Foreign key must be set with hasDatMany');
-        }
-
-        $this->getTable()->hasMany($alias, $options);
-        if (DatField::isDatField($fk)) {
-            $this->getTable()->$alias->registerForeignKey($fk);
-        }
-
-        return $this->getTable();
-    }
-
-    public function registerForeignKey(string $field, ?string $path = null): Table
-    {
-        if (DatField::isDatField($field)) {
-            ['field' => $field, 'path' => $path, 'model' => $model] = DatField::getDatFieldParts($field, $this->getTable()->getAlias());
-        } else {
-            $model = $this->getTable()->getAlias();
-        }
-
-        $property = $path . '@' . $field;
-
-        $fk = compact('field', 'path', 'property');
-        if (!in_array($fk, $this->_foreignKeys)) {
-            $this->_foreignKeys[] = $fk;
-        }
-
-        return $this->getTable();
-    }
-
-    public function getForeignKeys(): array
-    {
-        return $this->_foreignKeys;
     }
 }
