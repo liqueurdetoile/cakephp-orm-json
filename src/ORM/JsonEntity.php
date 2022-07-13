@@ -5,7 +5,7 @@ namespace Lqdt\OrmJson\ORM;
 
 use Cake\ORM\Entity;
 
-class ObjectEntity extends Entity
+class JsonEntity extends Entity
 {
     use \Lqdt\OrmJson\Model\Entity\DatFieldTrait;
 }
