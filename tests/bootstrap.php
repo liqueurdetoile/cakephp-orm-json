@@ -7,6 +7,7 @@ use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
 use Cake\Log\Log;
 use Cake\Utility\Security;
+use CakephpTestSuiteLight\Sniffer\MysqlTriggerBasedTableSniffer;
 use Migrations\TestSuite\Migrator;
 
 /**
@@ -94,27 +95,35 @@ Cache::setConfig(
 // Ensure default test connection is defined
 $dsn = env('CI', false) ?
   'mysql://root@localhost/cakeormjson_test' :
-  'mysql://root@localhost/cakeormjson_test';
+  'mysql://root@localhost/cakeormjson_test?log=false';
 
 putenv('DB_URL=' . $dsn);
 putenv('TESTING=1');
 
-ConnectionManager::setConfig('test', ['url' => getenv('DB_URL')]);
+ConnectionManager::setConfig('test', [
+  'tableSniffer' => MysqlTriggerBasedTableSniffer::class,
+  'url' => getenv('DB_URL'),
+]);
 
 Log::setConfig(
     [
-    'debug' => [
-        'engine' => 'Cake\Log\Engine\FileLog',
-        'levels' => ['notice', 'info', 'debug'],
-        'file' => 'debug',
-        'path' => LOGS,
-    ],
-    'error' => [
-        'engine' => 'Cake\Log\Engine\FileLog',
-        'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
-        'file' => 'error',
-        'path' => LOGS,
-    ],
+      'debug' => [
+          'engine' => 'Cake\Log\Engine\FileLog',
+          'levels' => ['notice', 'info', 'debug'],
+          'file' => 'debug',
+          'path' => LOGS,
+      ],
+      'error' => [
+          'engine' => 'Cake\Log\Engine\FileLog',
+          'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
+          'file' => 'error',
+          'path' => LOGS,
+      ],
+      'queries' => [
+          'className' => 'Console',
+          'stream' => 'php://stderr',
+          'scopes' => ['queriesLog'],
+      ],
     ]
 );
 
