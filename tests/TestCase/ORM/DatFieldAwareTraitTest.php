@@ -1,151 +1,111 @@
 <?php
 declare(strict_types=1);
 
-namespace Lqdt\OrmJson\Test\TestCase\Datasource;
+namespace Lqdt\OrmJson\Test\TestCase\ORM;
 
+use Cake\ORM\Table;
+use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
-use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
+use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
+use Lqdt\OrmJson\Model\Behavior\DatFieldBehavior;
+use Lqdt\OrmJson\Test\Model\Table\DatfieldsTable;
 
 class DatFieldAwareTraitTest extends TestCase
 {
-    public $parser = null;
-
-    public function setUp(): void
+    /**
+     * Checks that useDatFields operates in initialize hook of Table
+     */
+    public function testUpgradeAndRevertWithTrait(): void
     {
-        parent::setUp();
-        $this->parser = $this->getObjectForTrait(DatFieldAwareTrait::class);
-    }
+        $table = TableRegistry::get('Table', ['className' => DatfieldsTable::class]);
+        $connection = $table->getConnection();
 
-    public function tearDown(): void
-    {
-        $this->parser = null;
-        parent::tearDown();
-    }
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
 
-    public function isDatFieldData()
-    {
-        return [
-          [null, 0],
-          ['field', 0],
-          ['Model.field', 0],
-          ['attribute@field', 1],
-          ['attribute@Model.field', 1],
-          ['field->attribute', 2],
-          ['Model.field->attribute', 2],
-        ];
+        // Permanently upgrade connection for this instance
+        $connection = $table->useDatFields()->getConnection();
+
+        $this->assertEquals('test_dfm', $connection->configName());
+        $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        // Permanently downgrade connection for this instance
+        $connection = $table->useDatFields(false)->getConnection();
+
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        // Upgrade connection only or this query
+        $q = $table->find('datfields');
+        $connection = $table->getConnection();
+        $queryConnection = $q->getConnection();
+
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+        $this->assertEquals('test_dfm', $queryConnection->configName());
+        $this->assertInstanceOf(DatFieldMysql::class, $queryConnection->getDriver());
+
+        TableRegistry::clear();
     }
 
     /**
-     * @dataProvider isDatFieldData
+     * Checks autoupgrade with behavior
      */
-    public function testIsDatField($field, $expected)
+    public function testUseDatFieldsWhithBehavior(): void
     {
-        $this->assertEquals($expected, $this->parser->isDatField($field));
-    }
+        $table = TableRegistry::get('Objects', ['className' => Table::class]);
+        $table->addBehavior(DatFieldBehavior::class);
+        $connection = $table->getConnection();
 
-    public function parseDatFieldData()
-    {
-        return [
-          ['test@field', ['model' => null, 'field' => 'field', 'path' => 'test']],
-          ['field->test', ['model' => null, 'field' => 'field', 'path' => 'test']],
-          ['test.deep@field', ['model' => null, 'field' => 'field', 'path' => 'test.deep']],
-          ['field->test.deep', ['model' => null, 'field' => 'field', 'path' => 'test.deep']],
-          ['test@Model.field', ['model' => 'Model', 'field' => 'field', 'path' => 'test']],
-          ['Model.field->test', ['model' => 'Model', 'field' => 'field', 'path' => 'test']],
-          ['test@Model.field', ['model' => 'Model', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['Model.field->test', ['model' => 'Model', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['test@field', ['model' => 'Model', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['field->test', ['model' => 'Model', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['test.deep@field', ['model' => 'Model', 'field' => 'field', 'path' => 'test.deep'], 'Model'],
-          ['field->test.deep', ['model' => 'Model', 'field' => 'field', 'path' => 'test.deep'], 'Model'],
-          ['test@Joins.field', ['model' => 'Joins', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['Joins.field->test', ['model' => 'Joins', 'field' => 'field', 'path' => 'test'], 'Model'],
-          ['test.deep@field', ['model' => 'Model', 'field' => 'field', 'path' => 'test.deep'], 'Model'],
-          ['field->test.deep', ['model' => 'Model', 'field' => 'field', 'path' => 'test.deep'], 'Model'],
-          ['Joins.field->test', ['model' => 'Joins', 'field' => 'field', 'path' => 'test'], 'Model'],
-        ];
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        $table->useDatFields();
+        $connection = $table->getConnection();
+
+        $this->assertEquals('test_dfm', $connection->configName());
+        $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        TableRegistry::clear();
     }
 
     /**
-     * @dataProvider parseDatFieldData
+     * Checks autoupgrade with behavior
      */
-    public function testParseDatField($datfield, $expected, $repository = null)
+    public function testFinderWithBehavior(): void
     {
-        $this->assertEquals($expected, $this->parser->parseDatField($datfield, $repository));
-    }
+        $table = TableRegistry::get('Objects', ['className' => Table::class]);
+        $connection = $table->getConnection();
 
-    public function translateToJsonExtractData()
-    {
-        return [
-          ['field', 'field'],
-          ['Model.field', 'Model.field'],
-          ['attribute@field', 'field->"$.attribute"'],
-          ['field->attribute', 'field->"$.attribute"'],
-          ['attribute@field', 'field->>"$.attribute"', true],
-          ['field->attribute', 'field->>"$.attribute"', true],
-          ['attribute@field', 'Model.field->"$.attribute"', false, 'Model'],
-          ['field->attribute', 'Model.field->"$.attribute"', false, 'Model'],
-          ['attribute@field', 'Model.field->>"$.attribute"', true, 'Model'],
-          ['field->attribute', 'Model.field->>"$.attribute"', true, 'Model'],
-        ];
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        $table->addBehavior(DatFieldBehavior::class, ['upgrade' => true]);
+        $connection = $table->getConnection();
+
+        $this->assertEquals('test_dfm', $connection->configName());
+        $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
+
+        TableRegistry::clear();
     }
 
     /**
-     * @dataProvider translateToJsonExtractData
+     * Checks autoupgrade with behavior
      */
-    public function testTranslateToJsonExtract($field, $expected, $unquote = false, $repository = null)
+    public function testAutoUpgradeWhenUsingBehavior(): void
     {
-        $this->assertEquals($expected, $this->parser->translateToJsonExtract($field, $unquote, $repository));
-    }
+        $table = TableRegistry::get('Objects', ['className' => Table::class]);
+        $connection = $table->getConnection();
 
-    public function translateSQLToJsonExtractData()
-    {
-        return [
-          ['field', 'field'],
-          ['Model.field', 'Model.field'],
-          ['attribute@field', 'field->"$.attribute"'],
-          ['field->attribute', 'field->"$.attribute"'],
-          [
-            'username@attributes NOT IN (\'"test2"\', \'"test3"\')',
-            'attributes->"$.username" NOT IN (\'"test2"\', \'"test3"\')',
-          ],
-          [
-            'attributes->username NOT IN (\'"test2"\', \'"test3"\')',
-            'attributes->"$.username" NOT IN (\'"test2"\', \'"test3"\')',
-          ],
-          [
-            'username@attributes NOT LIKE "test" AND last.login@attributes < DATE_SUB(NOW(), INTERVAL 1 DAY)',
-            'attributes->"$.username" NOT LIKE "test" AND attributes->"$.last.login" < DATE_SUB(NOW(), INTERVAL 1 DAY)',
-          ],
-          [
-            'attributes->username NOT LIKE "test" AND attributes->"$.last.login" < DATE_SUB(NOW(), INTERVAL 1 DAY)',
-            'attributes->"$.username" NOT LIKE "test" AND attributes->"$.last.login" < DATE_SUB(NOW(), INTERVAL 1 DAY)',
-          ],
-        ];
-    }
+        $this->assertEquals('test', $connection->configName());
+        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
 
-    /**
-     * @dataProvider translateSQLToJsonExtractData
-     */
-    public function testTranslateSQLToJsonExtract($sql, $expected, $unquote = false, $repository = null)
-    {
-        $this->assertEquals($expected, $this->parser->translateSQLToJsonExtract($sql, $unquote, $repository));
-    }
+        $table->addBehavior(DatFieldBehavior::class, ['upgrade' => true]);
+        $connection = $table->getConnection();
 
-    public function renderFromDatFieldAndTemplateData()
-    {
-        return [
-          ['attribute@field', '{{model}}{{separator}}{{field}}{{separator}}{{path}}', '_', '_field_attribute'],
-          ['attribute@field', '{{field}}{{separator}}{{path}}', '_', 'field_attribute'],
-          ['field->attribute', '{{field}}{{separator}}{{path}}', '_', 'field_attribute'],
-        ];
-    }
+        $this->assertEquals('test_dfm', $connection->configName());
+        $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
 
-    /**
-     * @dataProvider renderFromDatFieldAndTemplateData
-     */
-    public function testRenderFromDatFieldAndTemplate($datfield, $template, $separator, $expected)
-    {
-        $this->assertEquals($expected, $this->parser->renderFromDatFieldAndTemplate($datfield, $template, $separator));
+        TableRegistry::clear();
     }
 }
