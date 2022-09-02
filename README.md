@@ -1,6 +1,8 @@
 [![Latest Stable Version](https://img.shields.io/github/release/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 [![license](https://img.shields.io/github/license/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 
+**This still work in progress. Please do not use it yet**
+
 # Cake-orm-json plugin
 
 **This branch is for CakePHP ^4.3 and has heavy breaking changes from 1.x. It supports PHP ^7.1 or ^8.0**
