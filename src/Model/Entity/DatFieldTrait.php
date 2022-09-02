@@ -10,9 +10,8 @@ declare(strict_types=1);
  */
 namespace Lqdt\OrmJson\Model\Entity;
 
-use Adbar\Dot;
 use Cake\Datasource\EntityTrait;
-use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
+use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 
 /**
  * This trait adds useful methods to get and set values in JSON fields
@@ -28,9 +27,12 @@ use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
  */
 trait DatFieldTrait
 {
-    use DatFieldAwareTrait, EntityTrait {
+    use DatFieldParserTrait {
+        DatFieldParserTrait::jsonMerge as protected _jsonMerge;
+    }
+
+    use EntityTrait {
         EntityTrait::get as protected _get;
-        EntityTrait::has as protected _has;
         EntityTrait::isAccessible as protected _isAccessible;
         EntityTrait::isDirty as protected _isDirty;
         EntityTrait::set as protected _set;
@@ -42,59 +44,44 @@ trait DatFieldTrait
      * Removes one or many fields or datfields
      *
      * For regular fields, it's an alias for unset
+     * For datfields, there's a huge difference as :
+     * - Data is removed from JSON field
+     * - Original data is updated to make operation reversible
+     * - JSON field is flag as dirty to allow triggering persistence operations after deletion
      *
-     * For JSON fields, il will updates original property and dirty state accordingly
-     *
-     * @param   string|array<string>     $field Field(s) or Datfield(s) name to unset
+     * @param   string|array<string>     $field Field(s) or datfield(s) name to unset
      * @return  self
+     * @see DatFieldTrait::unset
      */
     public function delete($field): self
     {
         $fields = (array)$field;
 
-        foreach ($fields as $datfield) {
-            if ($this->isDatField($datfield)) {
-                ['field' => $property, 'path' => $path] = $this->parseDatField($datfield);
-                $data = new Dot($this->get($property));
-                if ($data->has($path)) {
-                    $data->delete($path);
-                  // Clears dirty state for this property as it could mess up in future
-                    $this->setDirty($datfield, false);
-                    $this->_set($property, $data->all());
+        foreach ($fields as $name) {
+            if ($this->isDatField($name)) {
+                $field = $this->getDatFieldPart('field', $name);
+
+                if (!array_key_exists($field, $this->_fields)) {
+                    continue;
                 }
+
+                if (!$this->hasDatFieldPathInData($name, $this)) {
+                    continue;
+                }
+
+                if (!array_key_exists($field, $this->_original)) {
+                    $this->_original[$field] = $this->_fields[$field];
+                }
+
+                $this->deleteDatFieldValueInData($name, $this);
+                $this->setDirty($name, false);
+                $this->setDirty($field, true);
             } else {
                 $this->unset($datfield);
             }
         }
 
         return $this;
-    }
-
-    /**
-     * Returns whether this entity contains a field or a datfield named $field
-     * that contains a non-null value.
-     *
-     * @param array<string>|string $field The field or fields to check.
-     * @return bool
-     */
-    public function has($field): bool
-    {
-        foreach ((array)$field as $prop) {
-            if ($this->isDatField($prop)) {
-                ['field' => $f, 'path' => $path] = $this->parseDatField($prop);
-                if (!$this->_has($f)) {
-                    return false;
-                }
-
-                $f = new Dot($this->get($f));
-
-                return $f->get($path) !== null;
-            } elseif ($this->get($prop) === null) {
-                  return false;
-            }
-        }
-
-        return true;
     }
 
     /**
@@ -106,27 +93,18 @@ trait DatFieldTrait
     public function &get(string $field)
     {
         if ($this->isDatField($field)) {
-            $parts = $this->parseDatField($field);
-            $path = explode('.', $parts['path']);
-            $data = $this->get($parts['field']);
-            foreach ($path as $node) {
-                $data = &$data[$node] ?? null;
-
-                if ($data === null) {
-                    break;
-                }
-            }
+            $value = &$this->getDatFieldValueInData($field, $this, false);
         } else {
-            $data = $this->_get($field);
+            $value = &$this->_get($field);
         }
 
-        return $data;
+        return $value;
     }
 
     /**
      * Checks if a field or a datfield is accessible
      *
-     * For datfields, accessiblity can be granted at property level or field level
+     * If no accesibility status is stored at datfield level, field accessibility status will be used
      *
      * @param string $field Field or Datfield name
      * @return bool
@@ -156,47 +134,67 @@ trait DatFieldTrait
     }
 
     /**
+     * Merge missing original values in one or more json fields
+     *
+     * @param  string|array<string>   $keys Fields to merge
+     * @return self
+     */
+    public function jsonMerge($keys): self
+    {
+        return $this->_jsonMerge($this, $keys);
+    }
+
+    /**
      * Set a value inside field JSON data or map to regular field
+     *
+     * Accessibility is checked at field and datfield level
      *
      * @param   string    $field Dafield or array of [datfield => value]
      * @param   mixed           $value      Value to set
      * @param   array           $options    Options
      * @return  self
+     * @see EntityTrait::isAccessible
      */
     public function set($field, $value = null, array $options = []): self
     {
         // We need to rebuild options as in regular set
         if (!is_array($field) && !empty($field)) {
             $guard = false;
-            $fields = [$field => $value];
+            $field = [$field => $value];
         } else {
-            $fields = $field;
             $guard = true;
             $options = (array)$value;
         }
 
-        if (!is_array($fields)) {
+        if (!is_array($field)) {
             throw new \InvalidArgumentException('Cannot set an empty field');
         }
 
         $options += ['setter' => true, 'guard' => $guard];
 
-        foreach ($fields as $datfield => $value) {
-            if ($this->isDatField($datfield)) {
-                $key = $this->_getDatFieldKey($datfield);
-
-                if ($options['guard'] === true && !$this->isAccessible($key)) {
-                    continue;
-                }
-
-                ['field' => $field, 'path' => $path] = $this->parseDatField($datfield);
-                $fieldData = new Dot($this->get($field));
-                $fieldData->set($path, $value);
-                $this->setDirty($key, true);
-                $this->_set($field, $fieldData->all(), $options);
-            } else {
-                $data = $this->_set($datfield, $value, $options);
+        foreach ($field as $name => $value) {
+            if (!$this->isDatField($name)) {
+                $this->_set($name, $value, $options);
+                continue;
             }
+
+            $key = $this->_getDatFieldKey($name);
+            if ($options['guard'] === true && !$this->isAccessible($key)) {
+                continue;
+            }
+
+            $name = $this->getDatFieldPart('field', $name);
+            // Stores original field
+            if (
+                !array_key_exists($name, $this->_original) &&
+                array_key_exists($name, $this->_fields) &&
+                $this->get($key) !== $value
+            ) {
+                $this->_original[$name] = $this->_fields[$name];
+            }
+
+            $this->setDatFieldValueInData($key, $value, $this);
+            $this->setDirty($key, true);
         }
 
         return $this;
@@ -230,7 +228,7 @@ trait DatFieldTrait
     /**
      * Sets the dirty status of a single field or datfield
      *
-     * When procession a dat field, a checks will be done to ensure properties dirty state and field state are coherent
+     * When procession a datfield, a check is done to ensure properties dirty state and field dirtiness are coherent
      *
      * @param string $field the field to set or check status for
      * @param bool $isDirty true means the field was changed, false means
@@ -243,7 +241,7 @@ trait DatFieldTrait
             if ($isDirty === false) {
                 // clears all properties dirty state from field if any
                 foreach ($this->_dirty as $f => $value) {
-                    if (strpos($f, $field . '_') === 0) {
+                    if (strpos($f, $field . '->') === 0) {
                         unset($this->_dirty[$f]);
                     }
                 }
@@ -253,12 +251,12 @@ trait DatFieldTrait
         }
 
         $key = $this->_getDatFieldKey($field);
-        ['field' => $field] = $this->parseDatField($field);
+        $field = $this->getDatFieldPart('field', $field);
 
         if ($isDirty === false) {
             unset($this->_dirty[$key]);
             foreach ($this->_dirty as $f => $value) {
-                if ($value === true && strpos($f, $field . '_') !== false) {
+                if ($value === true && strpos($f, $field . '->') !== false) {
                     return $this;
                 }
             }
@@ -276,7 +274,7 @@ trait DatFieldTrait
     /**
      * Removes one or many fields or datfields
      *
-     * It will clears dirty state for the whole JSON field
+     * Similarly to regular fields, unsetting a datfield will clears out dirty state and original data for the whole JSON field
      *
      * @param   string|array<string>     $field Field(s) or Datfield(s) name to unset
      * @return  self
@@ -285,14 +283,23 @@ trait DatFieldTrait
     {
         $fields = (array)$field;
 
-        foreach ($fields as $field) {
+        foreach ($fields as $name) {
             if ($this->isDatField($field)) {
-                ['field' => $property, 'path' => $path] = $this->parseDatField($field);
-                $data = new Dot($this->get($property));
-                $data->delete($path);
-                $this->_set($property, $data->all());
-                $this->setDirty($property, false);
+                $field = $this->getDatFieldPart('field', $name);
+
+                if (!array_key_exists($field, $this->_fields)) {
+                    continue;
+                }
+
+                if (!$this->hasDatFieldPathInData($name, $this)) {
+                    continue;
+                }
+
+                $this->deleteDatFieldValueInData($name, $this);
+                $this->setDirty($field, false);
+                unset($this->_original[$field]);
             } else {
+                // We don't use parent method to avoid compatibility issues
                 unset($this->_fields[$field], $this->_original[$field], $this->_dirty[$field]);
             }
         }

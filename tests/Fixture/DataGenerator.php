@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace Lqdt\OrmJson\Test\TestCase;
+namespace Lqdt\OrmJson\Test\Fixture;
 
 use Adbar\Dot;
 use Faker\Factory;
 
 /**
- * This trait brings up fluid scheme support in order to generate a fixed set of data
+ * Brings up fluid scheme support in order to generate a fixed set of data for fixtures
  */
 class DataGenerator
 {
     /**
-     * Faker generator
+     * Faker generator instance
      *
      * @var \Faker\Generator
      */
@@ -75,7 +75,12 @@ class DataGenerator
     }
 
     /**
-     * Adds a callable
+     * Adds a callable to generate value
+     *
+     * Callback will be provided with three arguments :
+     * - Current row data as Adbar\Dot
+     * - Path key used to target value
+     * - Row offset if multiple rows are requested
      *
      * @param  string   $key Target key
      * @param  callable $callable Callable
@@ -108,18 +113,24 @@ class DataGenerator
     }
 
     /**
-     * Copy current value from a key to another at runtime
+     * Provides a sequence to the generator
      *
-     * @param  string $key Target key
-     * @param  string $sourcekey Source key
-     * @return self
+     * Data for each row will be fetched from the sequence at the same index
+     * If there's more rows requested than available in sequence, sequence will be looped
+     *
+     * @param  string $key                    [description]
+     * @param  array  $sequence               [description]
+     * @return self             [description]
      */
-    public function addCopy(string $key, string $sourcekey): self
+    public function sequence(string $key, array $sequence): self
     {
-        return $this->addCallable(
+        return $this->callable(
             $key,
-            function (Dot $data) use ($sourcekey) {
-                return $data->get($sourcekey);
+            function ($data, $key, $offset) use ($sequence) {
+                $n = count($sequence);
+                $i = $offset % $n;
+
+                return $sequence[$i];
             }
         );
     }
@@ -134,13 +145,13 @@ class DataGenerator
      * @param int $n Number of entities`
      * @return array
      */
-    public function generate(int $n = 1): array
+    public function generate(int $n = 1, int $offset = 0): array
     {
         if ($n === 1) {
             $data = new Dot();
             foreach ($this->scheme->flatten() as $key => $value) {
                 if (is_callable($value)) {
-                    $data->set($key, $value($data, $key));
+                    $data->set($key, $value($data, $key, $offset));
                 } else {
                     $data->set($key, $value);
                 }
@@ -152,7 +163,7 @@ class DataGenerator
         $collection = [];
 
         for ($i = 0; $i < $n; $i++) {
-            $collection[] = $this->generate(1);
+            $collection[] = $this->generate(1, $i);
         }
 
         return $collection;

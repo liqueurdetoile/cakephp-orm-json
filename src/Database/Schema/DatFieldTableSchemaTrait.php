@@ -1,0 +1,177 @@
+<?php
+declare(strict_types=1);
+
+namespace Lqdt\OrmJson\Database\Schema;
+
+use Lqdt\OrmJson\Database\JsonTypeMap;
+use Lqdt\OrmJson\DatField\DatFieldParserTrait;
+
+/**
+ * These upgraded schema is needed to handle applying data type into JSON data
+ *
+ * @license MIT
+ */
+trait DatFieldTableSchemaTrait
+{
+    use DatFieldParserTrait;
+
+    /**
+     * Stores permanent datfield JSON data types or JSON types definition
+     *
+     * @var array<string, string|array>
+     */
+    protected $_jsonTypeMap = [];
+
+    /**
+     * Stores transient datfield JSON types that will be removed after
+     * next call of typeMap()
+     *
+     * @var array
+     */
+    protected $_transientJsonTypeMap = [];
+
+    /**
+     * Permanently register a JSON type(s) in schema. provided type(s) will be added to current styles
+     * In case of target conflict
+     *
+     * @param array|string $types  Datfield to type or array of [<datfield> => type definition>,...]
+     * @param array|null   $type   Type definition
+     * @see _parseJsonTypes
+     * @return void
+     */
+    public function addJsonTypes($types, $type = null): void
+    {
+        $this->_jsonTypeMap = $this->_parseJsonTypes($types, $type) + $this->_jsonTypeMap;
+    }
+
+    /**
+     * Register transient JSON type(s) in schema
+     *
+     * These types will be removed after next call to DatFieldTableSchema::typeMap()
+     *
+     * @param array|string $types  Datfield to type or array of [<datfield> => type definition>,...]
+     * @param array|null   $type   Type definition
+     * @see _parseJsonTypes
+     * @return void
+     */
+    public function addTransientJsonTypes($types, $type = null): void
+    {
+        $this->_transientJsonTypeMap = $this->_parseJsonTypes($types, $type) + $this->_transientJsonTypeMap;
+    }
+
+    /**
+     * Permanently register a JSON type(s) in schema. provided type(s) will replace currently stored
+     * JSON types
+     *
+     * @param array|string $types  Datfield to type or array of [<datfield> => type definition>,...]
+     * @param array|null   $type   Type definition
+     * @see _parseJsonTypes
+     * @return void
+     */
+    public function setJsonTypes($types, $type = null): void
+    {
+        $this->_jsonTypeMap = $this->_parseJsonTypes($types, $type) + $this->_jsonTypeMap;
+    }
+
+    /**
+     * Register transient JSON type(s) in schema
+     *
+     * These types will be removed after next call to DatFieldTableSchema::typeMap()
+     *
+     * @param array|string $types  Datfield to type or array of [<datfield> => type definition>,...]
+     * @param array|null   $type   Type definition
+     * @see _parseJsonTypes
+     * @return void
+     */
+    public function setTransientJsonTypes($types, $type = null): void
+    {
+        $this->_transientJsonTypeMap = $this->_parseJsonTypes($types, $type) + $this->_transientJsonTypeMap;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getJsonTypeMap(): JsonTypeMap
+    {
+        $map = new JsonTypeMap();
+
+        $map->addJsonTypes($this->_jsonTypeMap);
+        $map->addJsonTypes($this->_transientJsonTypeMap);
+        $this->clearTransientJsonTypes();
+
+        return $map;
+    }
+
+    /**
+     * Clears permanent JSON types
+     *
+     * @return self
+     */
+    public function clearJsonTypes(): self
+    {
+        $this->_jsonTypeMap = [];
+
+        return $this;
+    }
+
+    /**
+     * Clears transient JSON types
+     *
+     * @return self
+     */
+    public function clearTransientJsonTypes(): self
+    {
+        $this->_transientJsonTypeMap = [];
+
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function typeMap(): array
+    {
+        $types = $this->_transientJsonTypeMap + $this->_jsonTypeMap + parent::typeMap();
+        $this->clearTransientJsonTypes();
+
+        return $types;
+    }
+
+    /**
+     * Process a single or a set of json types and returns it as a suitable array to be stored as json types
+     *
+     * @param array|string $types  Datfield to type or array of [<datfield> => type definition>,...]
+     * @param array|null $type   Type definition
+     * @return array  Processed JSON types
+     */
+    protected function _parseJsonTypes($types, $type = null): array
+    {
+        // Many types are provided in a single array
+        if (is_array($types)) {
+            $ret = [];
+
+            foreach ($types as $datfield => $type) {
+                $ret += $this->_parseJsonTypes($datfield, $type);
+            }
+
+            return $ret;
+        }
+
+        // Normalizes datfield name to key which is compatible with field aliasing
+        $field = $this->_getDatFieldKey($types);
+
+        // Converting string type
+        if (is_string($type)) {
+            $type = ['type' => $type];
+        }
+
+        // Initializes empty callbacks
+        $type += [
+          'marshal' => null,
+          'toPHP' => null,
+          'toDatabase' => null,
+        ];
+
+        return [$field => $type];
+    }
+}

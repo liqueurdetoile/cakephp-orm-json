@@ -3,11 +3,27 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\ORM;
 
-use Adbar\Dot;
-use Mustache_Engine;
+use Cake\Database\Connection;
+use Cake\Database\Driver\Mysql;
+use Cake\Database\Schema\TableSchema;
+use Cake\Database\Schema\TableSchemaInterface;
+use Cake\Datasource\ConnectionManager;
+use Cake\Datasource\Exception\MissingDatasourceConfigException;
+use Cake\ORM\Query;
+use Cake\ORM\Table;
+use Lqdt\OrmJson\Database\DatFieldDriverInterface;
+use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
+use Lqdt\OrmJson\Database\Schema\DatFieldTableSchema;
+use Lqdt\OrmJson\Database\Schema\DatFieldTableSchemaInterface;
+use Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo;
+use Lqdt\OrmJson\ORM\Association\DatFieldBelongsToMany;
+use Lqdt\OrmJson\ORM\Association\DatFieldHasMany;
+use Lqdt\OrmJson\ORM\Association\DatFieldHasOne;
 
 /**
- * Utility class to parse dat fields
+ * This trait will take care of handling driver and datfield associations.
+ *
+ * It is available natively within DatFieldBehavior
  *
  * @license MIT
  * @author  Liqueur de Toile <contact@liqueurdetoile.com>
@@ -15,263 +31,294 @@ use Mustache_Engine;
 trait DatFieldAwareTrait
 {
     /**
-     * Reads the datfield value in data. target data should not be nested
+     * If `true`, datfield support have been enabled
      *
-     * @param  string $key Datfield
-     * @param  array|\Lqdt\OrmJson\ORM\Entity $data Data
-     * @return mixed
+     * @var bool
      */
-    public function getDatFieldValueInData(string $key, $data)
+    protected $_datFieldsEnabled = false;
+
+    /**
+     * @inheritDoc
+     */
+    public function datFieldBelongsTo(string $associated, array $options = []): DatFieldBelongsTo
     {
-        // Regular field, simply map
-        if (!$this->isDatField($key)) {
-            return $data[$key];
-        }
+        $options += ['sourceTable' => $this];
 
-        if (is_array($data)) {
-            ['field' => $field, 'path' => $path] = $this->parseDatField($key);
-            $path = implode('.', [$field,$path]);
-            $dot = new Dot($data);
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo $association */
+        $association = $this->_associations->load(DatFieldBelongsTo::class, $associated, $options);
 
-            return $dot->get($path);
-        } else {
-            // Entity case, we can use getter
-            return $data->{$key};
-        }
+        return $association;
     }
 
     /**
-     * Return the requested part in datfield among `model`, `field` and `path`
-     *
-     * @param  string      $part       Datfield part
-     * @param  string      $datfield   Datfield
-     * @param  string|null $repository Repository name
-     * @return string|null
+     * @inheritDoc
      */
-    public function getDatFieldPart(string $part, string $datfield, ?string $repository = null): ?string
+    public function datFieldHasOne(string $associated, array $options = []): DatFieldHasOne
     {
-        if (!in_array($part, ['model', 'field', 'path'])) {
-            throw new \Exception('Requested part in DatField is not valid');
-        }
+        $options += ['sourceTable' => $this];
 
-        $parsed = $this->parseDatField($datfield, $repository);
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasOne $association */
+        $association = $this->_associations->load(DatFieldHasOne::class, $associated, $options);
 
-        return $parsed[$part];
+        return $association;
     }
 
     /**
-     * Utility function to check if a field is datfield and know its structure
-     *
-     * @param   string $field Field name
-     * @return  int   0 for non datfield strings, 1 for path@field notation and 2 for field->path notation
+     * @inheritDoc
      */
-    public function isDatField(?string $field = null): int
+    public function datFieldHasMany(string $associated, array $options = []): DatFieldHasMany
     {
-        if (!$field) {
-            return 0;
-        }
+        $options += ['sourceTable' => $this];
 
-        if (preg_match('/^[\w\.]+(@|->)[\w\.]+$/i', $field) === 1) {
-            return strpos($field, '@') !== false ? 1 : 2;
-        }
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasMany $association */
+        $association = $this->_associations->load(DatFieldHasMany::class, $associated, $options);
 
-        return 0;
+        return $association;
     }
 
     /**
-     * Parses a datfield into its parts, optionnally using repository name
-     *
-     * @param  string      $datfield   Datfield
-     * @param  string|null $repository Repository name
-     * @return array
+     * @inheritDoc
      */
-    public function parseDatField(string $datfield, ?string $repository = null): array
+    public function datFieldBelongsToMany(string $associated, array $options = []): DatFieldBelongsToMany
     {
-        $type = $this->isDatField($datfield);
+        $options += ['sourceTable' => $this];
 
-        if ($type === 0) {
-            throw new \Exception('Lqdt/OrmJson : Datfield format is invalid (' . $datfield . ')');
-        }
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsToMany $association */
+        $association = $this->_associations->load(DatFieldBelongsToMany::class, $associated, $options);
 
-        return $type === 1 ?
-          $this->_parseV1($datfield, $repository) :
-          $this->_parseV2($datfield, $repository);
+        return $association;
     }
 
     /**
-     * Translates a datfield into a JSON_CONTAINS_PATH SQL fragment
+     * Finder that enables datfield support by upgrading query connection
+     * It does not replace schema, so JSON types will not be available
      *
-     * @param  string   $datfield                 Datfield
-     * @param  ?string  $repository               Repository alias
-     * @param  string   $mode                  If `true`, Json enquote will be used
-     * @return string   SQL fragment
+     * @param \Cake\ORM\Query $query Query
+     * @return \Cake\ORM\Query Updated query
      */
-    public function translateToJsonContainsPath(
-        string $datfield,
-        ?string $repository = null,
-        string $mode = 'all'
-    ): string {
+    public function findDatfields(Query $query): Query
+    {
+        if ($this->_datFieldsEnabled === false) {
+            $connection = $this->getUpgradedConnectionForDatFields($query->getConnection());
+            $query->setConnection($connection);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Finder that enables datfield support by upgrading connection
+     *
+     * @param \Cake\ORM\Query $query [description]
+     * @return \Cake\ORM\Query [description]
+     */
+    public function findJson(Query $query): Query
+    {
+        return $this->findDatfields($query);
+    }
+
+    /**
+     * Returns the downgraded version of a connection ot the same connection if not already upgraded
+     *
+     * @param \Cake\Database\Connection $connection Connection
+     * @return \Cake\Database\Connection Downgraded connection
+     */
+    public function getDowngradedConnectionForDatFields(Connection $connection): Connection
+    {
+        $driver = $connection->getDriver();
+        $name = $connection->configName();
+
+        if (!($driver instanceof DatFieldDriverInterface)) {
+            return $connection;
+        }
+
+        // Find previous connection name and restores it on table
+        $name = str_replace('_dfm', '', $name);
+        $connection = ConnectionManager::get($name);
+
+        /**
+         * @var \Cake\Database\Connection $connection
+        */
+        return $connection;
+    }
+
+    /**
+     * Returns the upgraded version of a connection or the same connection if already upgraded
+     *
+     * @param \Cake\Database\Connection $connection Connection
+     * @return \Cake\Database\Connection Upgraded connection
+     */
+    public function getUpgradedConnectionForDatFields(Connection $connection): Connection
+    {
+        $driver = $connection->getDriver();
+        $name = $connection->configName();
+
+        if ($driver instanceof DatFieldDriverInterface) {
+            return $connection;
+        }
+
+        // Upgrades connection with a new name
+        $name .= '_dfm';
+
+        // Returns upgraded connection if already created
         try {
-            ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield, $repository);
-            $field = $model ? implode('.', [$model, $field]) : $field;
-            $path = implode('.', ['$', $path]);
+            /**
+             * @var \Cake\Database\Connection $connection
+            */
+            $connection = ConnectionManager::get($name);
+        } catch (MissingDatasourceConfigException $err) {
+            // We need to find out which database server is used
+            $db = get_class($driver);
 
-            return "JSON_CONTAINS_PATH({$field}, '{$mode}', '{$path}')";
-        } catch (\Exception $err) {
-            return $datfield;
+            switch ($db) {
+                case Mysql::class:
+                    $datfieldDriver = DatFieldMysql::class;
+                    break;
+                default:
+                    throw new \Exception('DatField driver can not be used with your database system');
+            }
+
+            // Creates new connection with upgraded driver and upgraded schema
+            // tableSchema option is only supported from CakePHP ^3.9
+            // Connection class will be overriden by config one
+            // Connection driver will always be overriden by upgraded one
+            /** @var array<string, mixed> $config */
+            $config = array_merge(
+                [
+                  'className' => Connection::class,
+                  'tableSchema' => DatFieldTableSchema::class,
+                ],
+                $connection->config(),
+                [
+                  'driver' => $datfieldDriver,
+                ]
+            );
+
+            ConnectionManager::setConfig($name, $config);
+
+            /**
+             * @var \Cake\Database\Connection $connection
+            */
+            $connection = ConnectionManager::get($name);
         }
+
+        return $connection;
     }
 
     /**
-     * Translates a datfield into a JSON_EXTRACT SQL fragment
+     * Process a TableSchema instance to import it into a regular schema and returns it
      *
-     * @param  string   $datfield                 Datfield
-     * @param  bool     $unquote                  If `true`, Json enquote will be used
-     * @param  ?string  $repository               Repository alias
-     * @return string   SQL fragment
+     * @param \Cake\Database\Schema\TableSchemaInterface $schema Schema to process
+     * @param string|null $classname Class name to use for returned schema
+     * @return \Cake\Database\Schema\TableSchemaInterface downgraded Schema
      */
-    public function translateToJsonExtract(string $datfield, bool $unquote = false, ?string $repository = null): string
+    public function getDowngradedSchemaForDatFields(
+        TableSchemaInterface $schema,
+        ?string $classname = null
+    ): TableSchemaInterface {
+        if (!($schema instanceof DatFieldTableSchemaInterface)) {
+            return $schema;
+        }
+
+        $columns = [];
+
+        foreach ($schema->columns() as $name) {
+            if (!$schema->isDatField($name)) {
+                $columns[$name] = $schema->getColumn($name);
+            }
+        }
+
+        $classname = $classname ?? TableSchema::class;
+
+        return new $classname($schema->name(), $columns);
+    }
+
+    /**
+     * Process a regular schema to import it into a DatFieldTableSchema instance and returns it
+     *
+     * @param \Cake\Database\Schema\TableSchemaInterface $schema Schema to process
+     * @param string|null $classname Class name to use for returned schema
+     * @return \Lqdt\OrmJson\Database\Schema\DatFieldTableSchemaInterface Upgraded Schema
+     */
+    public function getUpgradedSchemaForDatFields(
+        TableSchemaInterface $schema,
+        ?string $classname = null
+    ): DatFieldTableSchemaInterface {
+        if ($schema instanceof DatFieldTableSchemaInterface) {
+            return $schema;
+        }
+
+        $columns = [];
+
+        foreach ($schema->columns() as $name) {
+            $columns[$name] = $schema->getColumn($name);
+        }
+
+        $classname = $classname ?? DatFieldTableSchema::class;
+
+        return new $classname($schema->name(), $columns);
+    }
+
+    /**
+     * Upgrades table driver to allow use of DatFields
+     *
+     * @param bool $enabled   If set to false, connection will be resumed to previous one
+     * @return \Cake\ORM\Table
+     */
+    public function useDatFields(bool $enabled = true): Table
     {
-        try {
-            ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield, $repository);
-            $operator = $unquote ? '->>"$.' : '->"$.';
-            $field = $model ? implode('.', [$model, $field]) : $field;
-
-            return $field . $operator . $path . '"';
-        } catch (\Exception $err) {
-            return $datfield;
+        if (!$this instanceof Table) {
+            throw new \RuntimeException('DatFieldAwareTrait can only be used on a Table instance');
         }
+
+        return $enabled ?
+          $this->_upgradeConnectionForDatFields($this) :
+          $this->_downgradeConnectionForDatFields($this);
     }
 
     /**
-     * Parses all datfields in a SQL string to JSON_EXTRACT and returns it
+     * Reverts connection upgrade and resume normal connection use
      *
-     * @param  string  $expression               Expression to parse
-     * @param  bool     $unquote                  If `true`, Json enquote will be used
-     * @param  ?string  $repository               Repository alias
-     * @return string  Updated expression
+     * @param \Cake\ORM\Table $table Table to be upgraded
+     * @return \Cake\ORM\Table
      */
-    public function translateSQLToJsonExtract(
-        string $expression,
-        bool $unquote = false,
-        ?string $repository = null
-    ): string {
-        return preg_replace_callback(
-            '/[\w\.]+(@|->)[\w\.]+/i',
-            function ($matches) use ($unquote, $repository) {
-                return $this->translateToJsonExtract($matches[0], $unquote, $repository);
-            },
-            $expression
-        );
-    }
-
-    /**
-     * Buils an alias from a template
-     *
-     * @param  string      $datfield   Datfield
-     * @param  string      $template   Template
-     * @param  string      $separator  Separator
-     * @param  string|null $repository Repository name
-     * @return string             [description]
-     */
-    public function renderFromDatFieldAndTemplate(
-        string $datfield,
-        string $template,
-        string $separator = '_',
-        ?string $repository = null
-    ): string {
-        $parts = $this->parseDatField($datfield, $repository);
-        $parts['path'] = str_replace('.', $separator, $parts['path']);
-        $parts['separator'] = $separator;
-        $parts['sep'] = $separator;
-        $mustache = new Mustache_Engine();
-
-        return $mustache->render($template, $parts);
-    }
-
-    /**
-     * Returns the key to store field state in entity as both V1 and V2 notation can be used
-     *
-     * @param  string|null $datfield   Datfield
-     * @return string|null Key for datfield
-     */
-    protected function _getDatFieldKey(?string $datfield): ?string
+    protected function _downgradeConnectionForDatFields(Table $table): Table
     {
-        return $this->isDatField($datfield) ?
-          $this->renderFromDatFieldAndTemplate($datfield, '{{field}}{{separator}}{{path}}') :
-          $datfield;
+        if ($this->_datFieldsEnabled === false) {
+            return $table;
+        }
+
+        $connection = $table->getConnection();
+        $connection = $this->getDowngradedConnectionForDatFields($connection);
+        $classname = $connection->config()['tableSchema'] ?? null;
+        $schema = $this->getDowngradedSchemaForDatFields($table->getSchema(), $classname);
+        $table->setConnection($connection);
+        $table->setSchema($schema);
+        $this->_datFieldsEnabled = false;
+
+        return $table;
     }
 
     /**
-     * Parses V1 datfields (path@field)
+     * Upgrades connection and schema for the table to use DatFieldMysqlDriver and JSON types
      *
-     * @param  string $datfield                 Datfield to parse
-     * @param  string|null $repository               Repository name
-     * @return array  Datfield parts
+     * @param \Cake\ORM\Table $table Table to be upgraded
+     * @return \Cake\ORM\Table
      */
-    protected function _parseV1(string $datfield, ?string $repository): array
+    protected function _upgradeConnectionForDatFields(Table $table): Table
     {
-        $parts = explode('@', $datfield);
-        $path = array_shift($parts);
-        $field = array_shift($parts);
-
-        if (empty($path) || empty($field)) {
-            throw new \Exception('Lqdt/OrmJson : Datfield format is invalid (' . $datfield . ')');
+        if ($this->_datFieldsEnabled === true) {
+            return $table;
         }
 
-        return $this->_parse($field, $path, $repository);
-    }
+        $connection = $table->getConnection();
+        $connection = $this->getUpgradedConnectionForDatFields($connection);
+        $classname = $connection->config()['tableSchema'] ?? null;
+        $schema = $this->getUpgradedSchemaForDatFields($table->getSchema(), $classname);
+        $table->setConnection($connection);
+        $table->setSchema($schema);
+        $this->_datFieldsEnabled = true;
 
-    /**
-     * Parses V1 datfields (field->path)
-     *
-     * @param  string $datfield                      Datfield to parse
-     * @param  ?string $repository               Repository name
-     * @return array  Datfield parts
-     */
-    protected function _parseV2(string $datfield, ?string $repository): array
-    {
-        $parts = explode('->', $datfield);
-        $field = array_shift($parts);
-        $path = array_shift($parts);
-
-        if (empty($path) || empty($field)) {
-            throw new \Exception('Lqdt/OrmJson : Datfield format is invalid (' . $datfield . ')');
-        }
-
-        return $this->_parse($field, $path, $repository);
-    }
-
-    /**
-     * Parses field and path from parts
-     *
-     * @param  string  $field Model/field part
-     * @param  string  $path  Dotted path part
-     * @param  ?string $repository  Repository alias
-     * @return array  parsed parts of datfield
-     */
-    protected function _parse(string $field, string $path, ?string $repository): array
-    {
-        $model = $repository;
-
-        // Check if repository is prepended to path
-        $parts = explode('.', $path);
-        if ($parts[0] === $repository) {
-            $model = array_shift($parts);
-            $path = implode('.', $parts);
-        }
-
-        // Check if repository is prepended to field
-        $parts = explode('.', $field);
-        if (count($parts) > 1) {
-            $model = array_shift($parts);
-            $field = array_shift($parts);
-        }
-
-        return [
-          'model' => $model,
-          'field' => $field,
-          'path' => $path,
-        ];
+        return $table;
     }
 }

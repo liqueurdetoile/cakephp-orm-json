@@ -7,6 +7,7 @@ use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
 use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
+use Lqdt\OrmJson\Database\Schema\DatFieldTableSchema;
 use Lqdt\OrmJson\Model\Behavior\DatFieldBehavior;
 use Lqdt\OrmJson\Test\Model\Table\DatfieldsTable;
 
@@ -28,12 +29,14 @@ class DatFieldAwareTraitTest extends TestCase
 
         $this->assertEquals('test_dfm', $connection->configName());
         $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
+        $this->assertInstanceOf(DatFieldTableSchema::class, $table->getSchema());
 
         // Permanently downgrade connection for this instance
         $connection = $table->useDatFields(false)->getConnection();
 
         $this->assertEquals('test', $connection->configName());
         $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+        $this->assertNotInstanceOf(DatFieldTableSchema::class, $table->getSchema());
 
         // Upgrade connection only or this query
         $q = $table->find('datfields');
@@ -42,6 +45,7 @@ class DatFieldAwareTraitTest extends TestCase
 
         $this->assertEquals('test', $connection->configName());
         $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
+        $this->assertNotInstanceOf(DatFieldTableSchema::class, $table->getSchema());
         $this->assertEquals('test_dfm', $queryConnection->configName());
         $this->assertInstanceOf(DatFieldMysql::class, $queryConnection->getDriver());
 
@@ -72,27 +76,7 @@ class DatFieldAwareTraitTest extends TestCase
     /**
      * Checks autoupgrade with behavior
      */
-    public function testFinderWithBehavior(): void
-    {
-        $table = TableRegistry::get('Objects', ['className' => Table::class]);
-        $connection = $table->getConnection();
-
-        $this->assertEquals('test', $connection->configName());
-        $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
-
-        $table->addBehavior(DatFieldBehavior::class, ['upgrade' => true]);
-        $connection = $table->getConnection();
-
-        $this->assertEquals('test_dfm', $connection->configName());
-        $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
-
-        TableRegistry::clear();
-    }
-
-    /**
-     * Checks autoupgrade with behavior
-     */
-    public function testAutoUpgradeWhenUsingBehavior(): void
+    public function testUseDatFieldsWhithBehaviorAutoUpgrade(): void
     {
         $table = TableRegistry::get('Objects', ['className' => Table::class]);
         $connection = $table->getConnection();

@@ -30,7 +30,7 @@
     ],
     "require": {
         "php": "^7.1|^8.0",
-        "cakephp/cakephp": "^3.5|^4",
+        "cakephp/cakephp": "^3.5|^4.0",
         "adbario/php-dot-notation": "^2.0",
         "mustache/mustache": "^2.13"
     },
@@ -42,7 +42,7 @@
         "phpstan/extension-installer": "^1.1",
         "cakephp/cakephp-codesniffer": "^4.5",
         "cakephp/migrations": "@stable",
-        "vierge-noire/cakephp-test-suite-light": "^2.0"
+        "vierge-noire/cakephp-test-suite-light": "^1.0|^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -57,7 +57,7 @@
     },
     "scripts": {
         "test": "phpunit && phpstan analyze --memory-limit 1G",
-        "doc": "php phpDocumentor.phar -d ./src -t ./docs",
+        "doc": "php phpDocumentor.phar -d ./src -t ./docs/api",
         "stan": "phpstan analyze --memory-limit 1G"
     },
     "config": {

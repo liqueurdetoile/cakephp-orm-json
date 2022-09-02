@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Lqdt\OrmJson\ORM;
+namespace Lqdt\OrmJson\Test\Model\Entity;
 
 use Cake\ORM\Entity;
 
-class JsonEntity extends Entity
+class DatFieldEntity extends Entity
 {
     use \Lqdt\OrmJson\Model\Entity\DatFieldTrait;
 }

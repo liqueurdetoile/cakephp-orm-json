@@ -12,6 +12,8 @@ use Lqdt\OrmJson\ORM\Association\Loader\DatFieldSelectWithPivotLoader;
 
 class DatFieldBelongsToMany extends BelongsToMany
 {
+    use \Lqdt\OrmJson\DatField\DatFieldParserTrait;
+
     /**
      * @inheritDoc
      */
@@ -83,7 +85,7 @@ class DatFieldBelongsToMany extends BelongsToMany
                 // with finders & association conditions.
                 $matches = $this->_appendJunctionJoin($this->find())
                     ->select($keys)
-                    ->where(array_combine($prefixedForeignKey, $primaryValue));
+                    ->where(array_combine($prefixedForeignKey, $primaryValue)); // @phpstan-ignore-line
 
                 // Create a subquery join to ensure we get
                 // the correct entity passed to callbacks.

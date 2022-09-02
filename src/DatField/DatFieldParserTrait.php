@@ -1,0 +1,549 @@
+<?php
+declare(strict_types=1);
+
+namespace Lqdt\OrmJson\DatField;
+
+use Adbar\Dot;
+use Cake\ORM\Entity;
+use Lqdt\OrmJson\DatField\Exception\MissingPathInDataDatFieldException;
+use Lqdt\OrmJson\DatField\Exception\UnparsableDatFieldException;
+use Mustache_Engine;
+
+/**
+ * Utility class to parse datfield notation
+ *
+ * @license MIT
+ * @author  Liqueur de Toile <contact@liqueurdetoile.com>
+ */
+trait DatFieldParserTrait
+{
+    /**
+     * Applies a callback to data located based on key
+     *
+     * This way, one ca target any nested data by using datfield notation
+     *
+     * The data is passed by reference and will be updated accordingky
+     *
+     * In callback, the target value is passed by reference and can be modified at will
+     *
+     * @param  string   $key                    Field or datfield notation target
+     * @param  array|\Cake\ORM\Entity|\ArrayObject     $data                   Data to update
+     * @param  callable $callback               Callback to apply
+     * @param  mixed $args                  Arguments to pass to callback
+     * @return array|\Cake\ORM\Entity $data Updated data
+     */
+    public function applyCallbackToData(string $key, $data, callable $callback, ...$args)
+    {
+        $target = &$this->getDatFieldValueInData($key, $data, true);
+
+        if (is_array($target) && $this->_isSequentialArray($target)) {
+            foreach ($target as &$t) {
+                $t = $callback($t, ...$args);
+            }
+        } else {
+            $target = $callback($target, ...$args);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Deletes a datfield key in a data set
+     *
+     * @param  string $key Datfield
+     * @param  array|\Cake\ORM\Entity|\ArrayObject $data Data
+     * @param  bool $throwOnMissing If `true` an exception will be raised if facing a missing path node
+     * @return mixed
+     */
+    public function deleteDatFieldValueInData(string $key, &$data, bool $throwOnMissing = false)
+    {
+        if (!$this->isDatField($key)) {
+            unset($data[$key]);
+
+            return $data;
+        }
+
+        $path = $this->_parseDatFieldIntoPath($key);
+        $field = array_shift($path);
+        $node = array_pop($path);
+        $path = implode('.', $path);
+        $key = !empty($path) ? "{$field}->{$path}" : $field;
+
+        try {
+            $parent = &$this->getDatFieldValueInData($key, $data, $throwOnMissing);
+
+            if ($node === '*') {
+                $parent = [];
+
+                return $data;
+            }
+
+            if (is_numeric($node)) {
+                unset($parent[(int)$node]);
+
+                return $data;
+            }
+
+            if (is_string($node)) {
+                if (is_array($parent) && $this->_isSequentialArray($parent)) {
+                    foreach ($parent as &$item) {
+                        unset($item[$node]);
+                    }
+                } else {
+                    unset($parent[$node]);
+                }
+            }
+
+            return $data;
+        } catch (MissingPathInDataDatFieldException $err) {
+            if ($throwOnMissing) {
+                throw $err;
+            }
+
+            return $data;
+        }
+    }
+
+    /**
+     * Reads the datfield value in data and keeps a reference to the target node
+     *
+     * @param  string $key Datfield
+     * @param  array|\Cake\ORM\Entity|\ArrayObject $data Data
+     * @param  bool $throwOnMissing If `true` an exception will be raised if facing a missing path node
+     * @return mixed
+     */
+    public function &getDatFieldValueInData(string $key, &$data, bool $throwOnMissing = false)
+    {
+        $path = $this->_parseDatFieldIntoPath($key);
+        $chunk = &$data;
+
+        while (($node = array_shift($path)) !== null) {
+            if ($node === '*') {
+                if (is_array($chunk) && $this->_isSequentialArray($chunk)) {
+                    $remaining = implode('.', $path);
+
+                    // Dead end array. Simply stop here
+                    if (empty($remaining)) {
+                        break;
+                    }
+
+                    // Process next chunk for each item and merge results
+                    $subset = [];
+                    foreach ($chunk as &$item) {
+                        $next = &$this->getDatFieldValueInData($remaining, $item, $throwOnMissing);
+                        if (is_array($next) && $this->_isSequentialArray($next)) {
+                            $subset = array_merge($subset, $next);
+                        } else {
+                            $subset[] = &$next;
+                        }
+                    }
+
+                    $chunk = &$subset;
+                    break;
+                }
+            }
+
+            if (is_numeric($node)) {
+                $node = (int)$node;
+                if (array_key_exists($node, $chunk)) {
+                    $chunk = &$chunk[$node];
+                    continue;
+                }
+            }
+
+            if (is_string($node) && $this->_hasNode($node, $chunk)) {
+                $chunk = &$chunk[$node];
+                continue;
+            }
+
+            if ($throwOnMissing) {
+                throw new MissingPathInDataDatFieldException([$key, $node]);
+            }
+
+            $ret = null;
+
+            return $ret;
+        }
+
+        return $chunk;
+    }
+
+    /**
+     * Checks that path exists in provided data
+     *
+     * @param  string  $key                Field or datfield
+     * @param  array|\Cake\ORM\Entity|\ArrayObject  $data   Data
+     * @return bool
+     */
+    public function hasDatFieldPathInData(string $key, $data): bool
+    {
+        try {
+            $this->getDatFieldValueInData($key, $data, true);
+
+            return true;
+        } catch (MissingPathInDataDatFieldException $err) {
+            return false;
+        }
+    }
+
+    /**
+     * Sets a value targetted by datfield in data
+     *
+     * Unless $throwOnMissing id set to `true`, the path will be created if it doesn't exist
+     *
+     * @param  string $key Datfield
+     * @param  mixed  $value Value to apply
+     * @param  array|\Cake\ORM\Entity|\ArrayObject $data Data
+     * @param  bool $throwOnMissing If `true` an exception will be raised if facing a missing node in data
+     * @return array|\Cake\ORM\Entity Updated data
+     */
+    public function setDatFieldValueInData(string $key, $value, $data, bool $throwOnMissing = false)
+    {
+        try {
+            $chunk = &$this->getDatFieldValueInData($key, $data, true);
+        } catch (MissingPathInDataDatFieldException $err) {
+            if ($throwOnMissing) {
+                throw $err;
+            }
+
+            // We need to create the nodes matching the path
+            $chunk = $data;
+            $path = $this->_parseDatFieldIntoPath($key);
+            $current = [];
+
+            // Find the first missing node
+            try {
+                while ($node = array_shift($path)) {
+                    $current[] = $node;
+                    $chunk = &$this->getDatFieldValueInData(implode('.', $current), $data, true);
+                }
+            } catch (MissingPathInDataDatFieldException $err) {
+                if (isset($node)) {
+                    array_unshift($path, $node);
+                } else {
+                    throw new UnparsableDatFieldException('Empty datfield');
+                }
+            }
+
+            foreach ($path as $node) {
+                $chunk = &$this->_createNodeInChunk($node, $chunk);
+            }
+        }
+
+        if (is_array($chunk)) {
+            foreach ($chunk as &$item) {
+                $item = $value;
+            }
+        } else {
+            $chunk = $value;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Return the requested part in datfield between `model`, `field` and `path`
+     *
+     * @param  string      $part       Datfield part
+     * @param  string      $datfield   Datfield
+     * @param  string|null $repository Repository name
+     * @return string|null
+     */
+    public function getDatFieldPart(string $part, string $datfield, ?string $repository = null): ?string
+    {
+        if (!in_array($part, ['model', 'field', 'path'])) {
+            throw new \ValueError(
+                'Requested part in DatField is not valid. It must be one between model, field or path'
+            );
+        }
+
+        $parsed = $this->parseDatField($datfield, $repository);
+
+        return $parsed[$part];
+    }
+
+    /**
+     * Utility function to check if a field is datfield and if it's v1 or v2 notation
+     *
+     * @param   mixed $field Field name
+     * @return  int   0 for non datfield strings, 1 for path@field notation and 2 for field->path notation
+     */
+    public function isDatField($field = null): int
+    {
+        if (!is_string($field)) {
+            return 0;
+        }
+
+        if (preg_match('/^[\w\.\*\[\]]+(@|->)[\w\.\*\[\]]+$/i', $field) === 1) {
+            return strpos($field, '@') !== false ? 1 : 2;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Merge missing original values in an entity after patching
+     *
+     * @param \Cake\ORM\Entity $entity Entity
+     * @param  array  $keys                 Fields to merge, defautls to all json fields
+     * @return \Cake\ORM\Entity Updated entity
+     */
+    public function jsonMerge(Entity &$entity, $keys = ['*']): Entity
+    {
+        $original = $entity->getOriginalValues();
+
+        if (is_string($keys)) {
+            $keys = [$keys];
+        }
+
+        if ($keys === ['*']) {
+            $keys = array_filter(array_keys($original), function ($field) use ($entity) {
+                return is_array($entity->get($field));
+            });
+        }
+
+        foreach ($original as $field => $previous) {
+            if (!in_array($field, $keys)) {
+                continue;
+            }
+
+            $current = $entity->get($field);
+
+            // Skip if content are the same
+            if ($previous === $current) {
+                continue;
+            }
+
+            // Merge unmodified values in JSON field
+            if (is_array($previous) && is_array($current)) {
+                $previous = new Dot($previous);
+                $previous->mergeRecursiveDistinct($current);
+                $entity->set($field, $previous->all());
+            }
+        }
+
+        return $entity;
+    }
+
+    /**
+     * Parses a datfield into its parts, optionnally using repository name
+     *
+     * @param  string      $datfield   Datfield
+     * @param  string|null $repository Repository name
+     * @return array
+     */
+    public function parseDatField(string $datfield, ?string $repository = null): array
+    {
+        $type = $this->isDatField($datfield);
+
+        if ($type === 0) {
+            throw new UnparsableDatFieldException([$datfield]);
+        }
+
+        return $type === 1 ?
+          $this->_parseDatFieldV1($datfield, $repository) :
+          $this->_parseDatFieldV2($datfield, $repository);
+    }
+
+    /**
+     * Returns a string from a template and datfield parts
+     *
+     * @param  string      $datfield   Datfield
+     * @param  string      $template   Template
+     * @param  string      $separator  Separator
+     * @param  string|null $repository Repository name
+     * @return string             [description]
+     */
+    public function renderFromDatFieldAndTemplate(
+        string $datfield,
+        string $template,
+        string $separator = '_',
+        ?string $repository = null
+    ): string {
+        $parts = $this->parseDatField($datfield, $repository);
+        $parts['path'] = str_replace('.', $separator, $parts['path']);
+        $parts['separator'] = $separator;
+        $parts['sep'] = $separator;
+        $mustache = new Mustache_Engine();
+
+        return $mustache->render($template, $parts);
+    }
+
+    /**
+     * Utility function to create a new node in a given chunk
+     *
+     * Node is returned by reference to allow value update
+     *
+     * @param  string $node                Type of node to create
+     * @param  mixed  $chunk               Source node
+     * @return mixed  new node
+     */
+    protected function &_createNodeInChunk(string $node, &$chunk)
+    {
+        if ($node === '*') {
+            $chunk = [null];
+            $chunk = &$chunk[0];
+        } elseif (is_numeric($node)) {
+            $node = (int)$node;
+            if (!is_array($chunk)) {
+                $chunk = [];
+            }
+            $chunk[$node] = null;
+            $chunk = &$chunk[$node];
+
+            return $chunk;
+        } else {
+            $chunk[$node] = null;
+            $chunk = &$chunk[$node];
+        }
+
+        return $chunk;
+    }
+
+    /**
+     * Returns the key to store field state in entity as both V1 and V2 notation can be used
+     *
+     * As key must also be used to store path, simply converts v2 to v1 notation
+     *
+     * @param  string|null $datfield   Datfield
+     * @return string|null Key for datfield
+     */
+    protected function _getDatFieldKey(?string $datfield): ?string
+    {
+        return $this->isDatField($datfield) ?
+          $this->renderFromDatFieldAndTemplate($datfield, '{{field}}->{{path}}', '.') :
+          $datfield;
+    }
+
+    /**
+     * Checks that provided data has targetted node
+     *
+     * @param  string $node               Node key
+     * @param  mixed  $data               Data
+     * @return bool
+     */
+    protected function _hasNode(string $node, $data): bool
+    {
+        if ($data instanceof Entity) {
+            $data = json_encode($data);
+            if ($data !== false) {
+                $data = json_decode($data, true);
+            }
+        }
+
+        if (!is_array($data)) {
+            return false;
+        }
+
+        return array_key_exists($node, $data);
+    }
+
+    /**
+     * Checks if an array is sequential or not
+     *
+     * @param  array $arr Array to check
+     * @return bool
+     */
+    protected function _isSequentialArray(array $arr): bool
+    {
+        return !(array_keys($arr) !== range(0, count($arr) - 1));
+    }
+
+    /**
+     * Parses V1 datfields (path@field)
+     *
+     * @param  string $datfield                 Datfield to parse
+     * @param  string|null $repository               Repository name
+     * @return array  Datfield parts
+     */
+    protected function _parseDatFieldV1(string $datfield, ?string $repository): array
+    {
+        $parts = explode('@', $datfield);
+        $path = array_shift($parts);
+        $field = array_shift($parts);
+
+        if (empty($path) || empty($field)) {
+            throw new UnparsableDatFieldException([$datfield]);
+        }
+
+        return $this->_parseDatField($field, $path, $repository);
+    }
+
+    /**
+     * Parses V2 datfields (field->path)
+     *
+     * @param  string $datfield                      Datfield to parse
+     * @param  ?string $repository               Repository name
+     * @return array  Datfield parts
+     */
+    protected function _parseDatFieldV2(string $datfield, ?string $repository): array
+    {
+        $parts = explode('->', $datfield);
+        $field = array_shift($parts);
+        $path = array_shift($parts);
+
+        if (empty($path) || empty($field)) {
+            throw new UnparsableDatFieldException([$datfield]);
+        }
+
+        return $this->_parseDatField($field, $path, $repository);
+    }
+
+    /**
+     * Parses field and path from parts
+     *
+     * @param  string  $field Model/field part
+     * @param  string  $path  Dotted path part
+     * @param  ?string $repository  Repository alias
+     * @return array  parsed parts of datfield
+     */
+    protected function _parseDatField(string $field, string $path, ?string $repository): array
+    {
+        $model = $repository;
+
+        // Check if repository is prepended to path
+        $parts = explode('.', $path);
+        if ($parts[0] === $repository) {
+            $model = array_shift($parts);
+            $path = implode('.', $parts);
+        }
+
+        // Check if repository is prepended to field
+        $parts = explode('.', $field);
+        if (count($parts) > 1) {
+            $model = array_shift($parts);
+            $field = array_shift($parts);
+        }
+
+        return [
+          'model' => $model,
+          'field' => $field,
+          'path' => $path,
+        ];
+    }
+
+    /**
+     * Transforms a datfield or a dotted path into an array
+     * Indexes or joker are also transformed into path nodes
+     *
+     * @param  string $key Datfield or dotted path
+     * @return array<int, string>       Path nodes
+     */
+    protected function _parseDatFieldIntoPath(string $key): array
+    {
+        if (!$this->isDatField($key)) {
+            $parts = preg_split('/[\.\[\]]/', $key, 0, PREG_SPLIT_NO_EMPTY);
+            if ($parts !== false) {
+                return $parts;
+            }
+
+            throw new UnparsableDatFieldException('empty datfield');
+        }
+
+        ['field' => $field, 'path' => $path] = $this->parseDatField($key);
+        /** @var array<int, string> $path */
+        $path = preg_split('/[\.\[\]]/', $path, 0, PREG_SPLIT_NO_EMPTY);
+
+        return array_merge([$field], $path);
+    }
+}

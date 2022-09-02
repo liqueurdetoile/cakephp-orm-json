@@ -1,17 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace Lqdt\OrmJson\Test\TestCase\Model\Table;
+namespace Lqdt\OrmJson\Test\TestCase\Database\Driver;
 
 use Cake\Collection\Collection;
+use Cake\I18n\FrozenDate;
 use Cake\ORM\TableRegistry;
-use Cake\TestSuite\TestCase;
-use Lqdt\OrmJson\Test\TestCase\DataGenerator;
 
 /**
  * App\Model\Behavior\JsonBehavior Test Case
  */
-class OrderRootTableTest extends TestCase
+class TableOrderTableTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
@@ -28,19 +27,21 @@ class OrderRootTableTest extends TestCase
     {
         parent::setUp();
         $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
-        $generator = new DataGenerator();
-        $this->data = $generator
+        $this->data = $this->generator
+          ->clear()
           ->faker('attributes.number', 'randomNumber')
           ->faker('attributes.float', 'randomFloat', 2, 0.01, 0.05)
           ->faker('attributes.string', 'name')
           ->faker('attributes.date', 'date', 'Y-m-d H:i:s')
+          ->faker('attributes.nasty.date', 'date', 'd/m/Y')
           ->faker('attributes.really.deep.number', 'randomNumber')
           ->faker('attributes.really.deep.float', 'randomFloat', 2, 0.01, 0.05)
           ->faker('attributes.really.deep.string', 'name')
           ->faker('attributes.really.deep.date', 'date', 'Y-m-d H:i:s')
           ->generate(50);
-          $objects = $this->Objects->newEntities($this->data);
-          $this->objects = $this->Objects->saveManyOrFail($objects);
+
+        $objects = $this->Objects->newEntities($this->data);
+        $this->objects = $this->Objects->saveManyOrFail($objects);
     }
 
     /**
@@ -87,6 +88,53 @@ class OrderRootTableTest extends TestCase
         $objects = $this->Objects->find()->order($order)->all()->extract($field)->toArray(false);
 
         $this->assertSame($expected, $objects);
+    }
+
+    public function testOrderJsonTyped(): void
+    {
+        $previous = null;
+        $objects = $this->Objects
+          ->find('all', ['jsonTypeMap' => ['attributes->date' => 'datetime']])
+          ->order('attributes->date')
+          ->all();
+
+        foreach ($objects as $o) {
+            if ($previous) {
+                $this->assertTrue($o->{'date@attributes'} >= $previous->{'date@attributes'});
+            }
+
+            $previous = $o;
+        }
+    }
+
+    public function testOrderNastyJsonTyped(): void
+    {
+        $previous = null;
+        $objects = $this->Objects
+          ->find('all', [
+            'jsonTypeMap' => [
+              'attributes->nasty.date' => [
+                'toPHP' => function ($value) {
+                    return FrozenDate::createFromFormat('d/m/Y', $value);
+                },
+              ],
+            ],
+          ])
+          ->orderAsc(function ($expr, $q) {
+              return $q->func()->str_to_date([
+                'attributes->nasty.date' => 'identifier',
+                '"%d/%m/%Y"' => 'literal',
+              ]);
+          })
+          ->toArray();
+
+        foreach ($objects as $o) {
+            if ($previous) {
+                $this->assertTrue($o->{'nasty.date@attributes'} >= $previous->{'attributes->nasty.date'});
+            }
+
+            $previous = $o;
+        }
     }
 
     public function testMultipleOrder(): void

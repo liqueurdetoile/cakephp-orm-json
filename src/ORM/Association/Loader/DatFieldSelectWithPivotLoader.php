@@ -5,11 +5,11 @@ namespace Lqdt\OrmJson\ORM\Association\Loader;
 
 use Cake\ORM\Association\Loader\SelectWithPivotLoader;
 use Cake\ORM\Query;
-use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
+use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 
 class DatFieldSelectWithPivotLoader extends SelectWithPivotLoader
 {
-    use DatFieldAwareTrait;
+    use DatFieldParserTrait;
 
     /**
      * @inheritDoc
@@ -21,7 +21,7 @@ class DatFieldSelectWithPivotLoader extends SelectWithPivotLoader
 
         foreach ($fetchQuery->all() as $result) {
             if (!isset($result[$this->junctionProperty])) {
-                throw new RuntimeException(sprintf(
+                throw new \RuntimeException(sprintf(
                     '"%s" is missing from the belongsToMany results. Results cannot be created.',
                     $this->junctionProperty
                 ));
