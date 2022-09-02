@@ -285,7 +285,7 @@ trait DatFieldParserTrait
      * Merge missing original values in an entity after patching
      *
      * @param \Cake\ORM\Entity $entity Entity
-     * @param  array  $keys                 Fields to merge, defautls to all json fields
+     * @param  string|array<string>  $keys                 Fields to merge, defautls to all json fields
      * @return \Cake\ORM\Entity Updated entity
      */
     public function jsonMerge(Entity &$entity, $keys = ['*']): Entity

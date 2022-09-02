@@ -77,7 +77,7 @@ trait DatFieldTrait
                 $this->setDirty($name, false);
                 $this->setDirty($field, true);
             } else {
-                $this->unset($datfield);
+                $this->unset($name);
             }
         }
 
@@ -141,7 +141,9 @@ trait DatFieldTrait
      */
     public function jsonMerge($keys): self
     {
-        return $this->_jsonMerge($this, $keys);
+        $this->_jsonMerge($this, $keys);
+
+        return $this;
     }
 
     /**
