@@ -18,7 +18,7 @@ class DatFieldAwareTraitTest extends TestCase
      */
     public function testUpgradeAndRevertWithTrait(): void
     {
-        $table = TableRegistry::get('Table', ['className' => DatfieldsTable::class]);
+        $table = TableRegistry::get('Table', ['className' => DatfieldsTable::class])->setTable('objects');
         $connection = $table->getConnection();
 
         $this->assertEquals('test', $connection->configName());

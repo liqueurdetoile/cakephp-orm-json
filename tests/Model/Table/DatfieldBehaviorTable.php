@@ -5,12 +5,14 @@ namespace Lqdt\OrmJson\Test\Model\Table;
 
 use Cake\ORM\Table;
 use Lqdt\OrmJson\Model\Behavior\DatFieldBehavior;
+use Lqdt\OrmJson\Test\Model\Entity\DatFieldEntity;
 
-class LocationsTable extends Table
+class DatfieldBehaviorTable extends Table
 {
     public function initialize(array $options): void
     {
-        $this->setTable('locations');
+        $this->setPrimaryKey('id');
+        $this->setEntityClass(DatFieldEntity::class);
         $this->addBehavior(DatFieldBehavior::class, ['upgrade' => true]);
     }
 }

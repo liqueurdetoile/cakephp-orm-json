@@ -16,6 +16,7 @@ class DatFieldTraitTest extends TestCase
         $this->assertEquals('test', $e->{'test@data'});
         $this->assertEquals('test', $e->get('data->test'));
         $this->assertEquals('test', $e->{'data->test'});
+        $this->assertEquals('test', $e['data->test']);
 
         // Checks that reference is kept
         $v1 = &$e->get('data')['test'];

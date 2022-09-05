@@ -11,6 +11,6 @@ class DatfieldsTable extends Table
 
     public function initialize(array $config): void
     {
-        $this->setTable('objects');
+        // $this->setTable('objects');
     }
 }
