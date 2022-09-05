@@ -58,7 +58,7 @@ trait DatFieldSqlDialectTrait
         }
 
         // Overrides function detection as it does not supports multiple comma separated arguments
-        // It must be before comma detector
+        // It must be handled before comma detector
         if (preg_match('/^([\w-]+)\((.*)\)(\s*AS\s*([\w-]+))?$/', $identifier, $matches)) {
             return empty($matches[4]) ?
               $matches[1] . '(' . $this->quoteIdentifier($matches[2]) . ')' :
@@ -103,7 +103,6 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
-                debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 
@@ -286,17 +285,32 @@ trait DatFieldSqlDialectTrait
 
         // Translate select clause
         if ($datFieldsEnabled) {
-            // Translate select statement
-            $query = $this->_translateSelect($query, $selectmap);
+            $query->traverse(function ($part, $clause) use ($query, $map, &$selectmap) {
+                // if (!empty($part)) {
+                //     debug($clause);
+                //     debug($part);
+                // }
+                // Translate select statement
+                if ($clause === 'select' && !empty($part)) {
+                    $query = $this->_translateSelect($query, $selectmap);
+                }
 
-            // Translate group clause
-            $query = $query->group(array_map(function ($field) use ($map) {
-                return $this->translateDatFieldAsSql($field, (bool)$map->type($field));
-            }, $query->clause('group')), true);
+                // Translate group clause
+                if ($clause === 'group' && !empty($part)) {
+                    $query = $query->group(array_map(function ($field) use ($map) {
+                        return $this->translateDatFieldAsSql($field, (bool)$map->type($field));
+                    }, $part), true);
+                }
 
-            $query->traverse(function ($part, $clause) use ($query, $map) {
-                // debug($clause);
-                // debug($part);
+                // Translate associations
+                if ($clause === 'join' && !empty($part)) {
+                    foreach ($part as $name => $joint) {
+                        $joint['conditions']->traverse(function ($e) use ($query, $map) {
+                              $this->translateExpression($e, $query, $map);
+                        });
+                    }
+                }
+
                 if ($part instanceof ExpressionInterface) {
                     $this->translateExpression($part, $query, $map);
                 }
@@ -615,6 +629,11 @@ trait DatFieldSqlDialectTrait
                 continue;
             }
 
+            if (is_int($field)) {
+                $updatedFields[$alias] = $field;
+                continue;
+            }
+
             // Regular field case
             if (!$this->isDatField($field)) {
                 $updatedFields[$alias] = $this->_translateRawSQL($field, $query, $map);
@@ -628,12 +647,7 @@ trait DatFieldSqlDialectTrait
 
                 // If field is selected without alias, we must link type to previous cakephp alias
                 $palias = is_string($alias) ? $alias : null;
-
-                $alias = strtolower($this->renderFromDatFieldAndTemplate(
-                    $field,
-                    '{{field}}{{separator}}{{path}}',
-                    '_',
-                ));
+                $alias = $this->aliasDatField($field);
 
                 // Restore model alias
                 if ($query instanceof ORMQuery) {
