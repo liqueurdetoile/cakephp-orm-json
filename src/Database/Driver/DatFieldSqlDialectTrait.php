@@ -594,6 +594,11 @@ trait DatFieldSqlDialectTrait
             return $expr;
         }
 
+        // Avoid translating already CAST TO JSON strings as it can mess up
+        if (preg_match('/^CAST\(.*AS JSON\)$/', $fragment)) {
+            return $fragment;
+        }
+
         return preg_replace_callback(
             '/[\w\.\*\[\]]+(@|->)[\w\.\*\[\]]+/',
             function (array $matches) {
