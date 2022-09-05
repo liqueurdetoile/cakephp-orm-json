@@ -207,26 +207,22 @@ trait DatFieldParserTrait
             }
 
             // We need to create the nodes matching the path
-            $chunk = $data;
             $path = $this->_parseDatFieldIntoPath($key);
+            $chunk = &$data;
             $current = [];
 
             // Find the first missing node
-            try {
-                while ($node = array_shift($path)) {
-                    $current[] = $node;
+            while ($node = array_shift($path)) {
+                $current[] = $node;
+                try {
                     $chunk = &$this->getDatFieldValueInData(implode('.', $current), $data, true);
+                } catch (MissingPathInDataDatFieldException $err) {
+                    if (!empty($node)) {
+                        $chunk = &$this->_createNodeInChunk($node, $chunk);
+                    } else {
+                        throw new UnparsableDatFieldException('Empty datfield');
+                    }
                 }
-            } catch (MissingPathInDataDatFieldException $err) {
-                if (isset($node)) {
-                    array_unshift($path, $node);
-                } else {
-                    throw new UnparsableDatFieldException('Empty datfield');
-                }
-            }
-
-            foreach ($path as $node) {
-                $chunk = &$this->_createNodeInChunk($node, $chunk);
             }
         }
 
@@ -239,6 +235,24 @@ trait DatFieldParserTrait
         }
 
         return $data;
+    }
+
+    /**
+     * Converts a datfield to a suitable alias string for querying
+     * Non datfield strings will be returned unchanged
+     *
+     * @param  string $datfield  Datfield
+     * @return string             Alias
+     */
+    public function aliasDatField(string $datfield): string
+    {
+        return $this->isDatField($datfield) ?
+          strtolower($this->renderFromDatFieldAndTemplate(
+              $datfield,
+              '{{field}}{{separator}}{{path}}',
+              '_',
+          )) :
+          $datfield;
     }
 
     /**
@@ -381,23 +395,24 @@ trait DatFieldParserTrait
     protected function &_createNodeInChunk(string $node, &$chunk)
     {
         if ($node === '*') {
-            $chunk = [null];
-            $chunk = &$chunk[0];
-        } elseif (is_numeric($node)) {
-            $node = (int)$node;
-            if (!is_array($chunk)) {
-                $chunk = [];
-            }
-            $chunk[$node] = null;
-            $chunk = &$chunk[$node];
+            $chunk = ['__tmp__'];
+            $ret = &$chunk[0];
 
-            return $chunk;
-        } else {
-            $chunk[$node] = null;
-            $chunk = &$chunk[$node];
+            return $ret;
         }
 
-        return $chunk;
+        if (is_numeric($node)) {
+            $node = (int)$node;
+        }
+
+        if (empty($chunk) || $chunk === '__tmp__') {
+            $chunk = [];
+        }
+
+        $chunk[$node] = '__tmp__';
+        $ret = &$chunk[$node];
+
+        return $ret;
     }
 
     /**

@@ -6,26 +6,31 @@ namespace Lqdt\OrmJson\Test\TestCase\DatField;
 use Cake\ORM\Entity;
 use Cake\TestSuite\TestCase;
 use Cake\Utility\Text;
-use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 use Lqdt\OrmJson\DatField\Exception\MissingPathInDataDatFieldException;
+use Lqdt\OrmJson\Test\Model\DatFieldParser;
 
 class DatFieldParserTraitTest extends TestCase
 {
-    public $parser = null;
+    /**
+     * Mocked trait
+     *
+     * @var \Lqdt\OrmJson\Tests\Model\DatFieldParser
+     */
+    public $parser;
 
     public function setUp(): void
     {
         parent::setUp();
-        $this->parser = $this->getObjectForTrait(DatFieldParserTrait::class);
+        $this->parser = new DatFieldParser();
     }
 
     public function tearDown(): void
     {
-        $this->parser = null;
+        unset($this->parser);
         parent::tearDown();
     }
 
-    public function testGetDatFieldPart()
+    public function testGetDatFieldPart(): void
     {
         $this->assertEquals('data', $this->parser->getDatFieldPart('field', 'test@data'));
         $this->assertEquals('test.var', $this->parser->getDatFieldPart('path', 'data->test.var'));
@@ -35,7 +40,7 @@ class DatFieldParserTraitTest extends TestCase
         $this->parser->getDatFieldPart('silly', 'test@data');
     }
 
-    public function getDatFieldValueInDataData()
+    public function getDatFieldValueInDataData(): array
     {
         $data = [
           'id' => Text::uuid(),
@@ -94,8 +99,13 @@ class DatFieldParserTraitTest extends TestCase
         ];
     }
 
-    /** @dataProvider getDatFieldValueInDataData */
-    public function testGetDatFieldValueInData($key, $data, $expected): void
+    /**
+     * @param string $key       Field or Datfield
+     * @param array|\Cake\ORM\Entity $data      Data
+     * @param string | null $expected  Expected
+     * @dataProvider getDatFieldValueInDataData
+     */
+    public function testGetDatFieldValueInData(string $key, $data, $expected): void
     {
         $throwIfMissing = $expected === MissingPathInDataDatFieldException::class;
 
@@ -118,7 +128,7 @@ class DatFieldParserTraitTest extends TestCase
         }
     }
 
-    public function hasReferenceWithGetDatFieldValueInDataData()
+    public function hasReferenceWithGetDatFieldValueInDataData(): array
     {
         $data = [
           'id' => Text::uuid(),
@@ -214,6 +224,12 @@ class DatFieldParserTraitTest extends TestCase
         $data = $this->parser->setDatFieldValueInData('attributes->missing', true, $data);
         $this->assertTrue($data['attributes']['missing']);
 
+        $data = $this->parser->setDatFieldValueInData('at2->very.missing', true, $data);
+        $this->assertTrue($data['at2']['very']['missing']);
+
+        $this->parser->setDatFieldValueInData('at2->very.missing', true, $entity);
+        $this->assertTrue($entity['at2']['very']['missing']);
+
         $data = $this->parser->setDatFieldValueInData('attributes->other.missing', true, $data);
         $this->assertTrue($data['attributes']['other']['missing']);
 
@@ -299,7 +315,7 @@ class DatFieldParserTraitTest extends TestCase
         $this->assertSame([], $entity['attributes']['arr']);
     }
 
-    public function isDatFieldData()
+    public function isDatFieldData(): array
     {
         return [
           [null, 0],
@@ -318,12 +334,12 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider isDatFieldData
      */
-    public function testIsDatField($field, $expected)
+    public function testIsDatField($field, $expected): void
     {
         $this->assertEquals($expected, $this->parser->isDatField($field));
     }
 
-    public function parseDatFieldData()
+    public function parseDatFieldData(): array
     {
         return [
           ['test@field', ['model' => null, 'field' => 'field', 'path' => 'test']],
@@ -349,12 +365,12 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider parseDatFieldData
      */
-    public function testParseDatField($datfield, $expected, $repository = null)
+    public function testParseDatField($datfield, $expected, $repository = null): void
     {
         $this->assertEquals($expected, $this->parser->parseDatField($datfield, $repository));
     }
 
-    public function renderFromDatFieldAndTemplateData()
+    public function renderFromDatFieldAndTemplateData(): array
     {
         return [
           ['attribute@field', '{{model}}{{separator}}{{field}}{{separator}}{{path}}', '_', '_field_attribute'],
@@ -366,7 +382,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider renderFromDatFieldAndTemplateData
      */
-    public function testRenderFromDatFieldAndTemplate($datfield, $template, $separator, $expected)
+    public function testRenderFromDatFieldAndTemplate($datfield, $template, $separator, $expected): void
     {
         $this->assertEquals($expected, $this->parser->renderFromDatFieldAndTemplate($datfield, $template, $separator));
     }
