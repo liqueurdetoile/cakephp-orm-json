@@ -68,17 +68,19 @@ class DatFieldBelongsToMany extends BelongsToMany
 
                 $keys = $matchesConditions = [];
                 foreach (array_merge($assocForeignKey, $junctionPrimaryKey) as $key) {
-                    // We need to use field alias for mapping as full json field will not be loaded in inner SELECT
+                    // We need to use handle alias differently for mapping as full json field will not be loaded in inner SELECT
                     if ($this->isDatField($key)) {
-                        $identifier = $junctionQueryAlias
-                          . '.'
-                          . $this->renderFromDatFieldAndTemplate($key, '{{field}}{{separator}}{{path}}', '_');
+                        $alias = $this->aliasDatField($key);
+                        $identifier = $junctionQueryAlias . '.' . $alias;
+                        $key = $junction->aliasField($key);
+                        $keys[$alias] = $key;
+                        $matchesConditions[$alias] = new IdentifierExpression($identifier);
                     } else {
                         $identifier = $junctionQueryAlias . '.' . $key;
+                        $aliased = $junction->aliasField($key);
+                        $keys[$key] = $aliased;
+                        $matchesConditions[$aliased] = new IdentifierExpression($identifier);
                     }
-                    $aliased = $junction->aliasField($key);
-                    $keys[$key] = $aliased;
-                    $matchesConditions[$aliased] = new IdentifierExpression($identifier);
                 }
 
                 // Use association to create row selection

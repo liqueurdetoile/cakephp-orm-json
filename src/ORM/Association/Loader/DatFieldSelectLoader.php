@@ -6,7 +6,6 @@ namespace Lqdt\OrmJson\ORM\Association\Loader;
 use Cake\ORM\Association;
 use Cake\ORM\Association\Loader\SelectLoader;
 use Cake\ORM\Query;
-use InvalidArgumentException;
 use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 
 class DatFieldSelectLoader extends SelectLoader
@@ -25,6 +24,22 @@ class DatFieldSelectLoader extends SelectLoader
             $this->bindingKey;
         $key = (array)$keys;
 
+        // If foreign key have been aliased, we must update foreign key to match data correctly
+        $select = array_flip($fetchQuery->clause('select'));
+        $key = array_map(function ($k) use ($fetchQuery, $select) {
+            if ($this->isDatField($k)) {
+                if (empty($this->getDatFieldPart('model', $k))) {
+                    $k = $fetchQuery->getRepository()->getAlias() . '.' . $k;
+                }
+
+                if (is_int($select[$k] ?? false)) {
+                    $select[$k] = $this->aliasDatField($k);
+                }
+            }
+
+            return $select[$k] ?? $k;
+        }, $key);
+
         foreach ($fetchQuery->all() as $result) {
             $values = [];
             foreach ($key as $k) {
@@ -39,47 +54,5 @@ class DatFieldSelectLoader extends SelectLoader
         }
 
         return $resultMap;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    protected function _assertFieldsPresent(Query $fetchQuery, array $key): void
-    {
-        if ($fetchQuery->isAutoFieldsEnabled()) {
-            return;
-        }
-
-        // We must override here as aliasFields broke datfield notation
-        $select = $fetchQuery->aliasFields($fetchQuery->clause('select'));
-        if (empty($select)) {
-            return;
-        }
-
-        $missingKey = function ($fieldList, $key) {
-            foreach ($key as $keyField) {
-                if (!in_array($keyField, $fieldList, true)) {
-                    return true;
-                }
-            }
-
-            return false;
-        };
-
-        $missingFields = $missingKey($select, $key);
-        if ($missingFields) {
-            $driver = $fetchQuery->getConnection()->getDriver();
-            $quoted = array_map([$driver, 'quoteIdentifier'], $key);
-            $missingFields = $missingKey($select, $quoted);
-        }
-
-        if ($missingFields) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'You are required to select the "%s" field(s)',
-                    implode(', ', $key)
-                )
-            );
-        }
     }
 }
