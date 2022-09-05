@@ -18,6 +18,9 @@ class DatFieldAwareTraitTest extends TestCase
      */
     public function testUpgradeAndRevertWithTrait(): void
     {
+        /**
+         * @var \Lqdt\OrmJson\Test\Model\Table\DatfieldsTable $table
+         */
         $table = TableRegistry::get('Table', ['className' => DatfieldsTable::class])->setTable('objects');
         $connection = $table->getConnection();
 
@@ -55,7 +58,7 @@ class DatFieldAwareTraitTest extends TestCase
     /**
      * Checks autoupgrade with behavior
      */
-    public function testUseDatFieldsWhithBehavior(): void
+    public function testUseDatFieldsWithBehavior(): void
     {
         $table = TableRegistry::get('Objects', ['className' => Table::class]);
         $table->addBehavior(DatFieldBehavior::class);
@@ -64,6 +67,7 @@ class DatFieldAwareTraitTest extends TestCase
         $this->assertEquals('test', $connection->configName());
         $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
 
+        /** @phpstan-ignore-next-line */
         $table->useDatFields();
         $connection = $table->getConnection();
 

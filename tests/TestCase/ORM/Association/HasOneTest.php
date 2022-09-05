@@ -6,52 +6,52 @@ namespace Lqdt\OrmJson\Test\TestCase\ORM\Association;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
 use Lqdt\OrmJson\Test\Fixture\DataGenerator;
+use Lqdt\OrmJson\Test\Model\Table\ClientsTable;
 
 class HasOneTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
-    public $Agents;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable
+     */
     public $Clients;
 
-    public $agents;
+    /**
+     * @var array
+     */
     public $clients;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $this->Agents = TableRegistry::get('Agents', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'agents',
+        /**
+         * @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable $Clients
+         */
+        $Clients = TableRegistry::get('Clients', [
+          'className' => ClientsTable::class,
         ]);
 
-        $this->Clients = TableRegistry::get('Clients', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'clients',
-        ]);
-
+        $this->Clients = $Clients;
         $generator = new DataGenerator();
 
         // Generate agents
-        $this->agents = $generator
+        $this->clients = $generator
           ->faker('id', 'uuid')
           ->faker('attributes.name', 'name')
-          ->faker('client.attributes.name', 'name')
-          ->faker('client.attributes.level', 'randomElement', [0,1,2])
-          ->faker('client.attributes.company', 'company')
+          ->faker('contact.id', 'uuid')
+          ->callable('contact.attributes.client_id', function ($data) {
+              return $data['id'];
+          })
+          ->faker('contact.attributes.mail', 'email')
           ->generate(20);
 
-        $this->Agents->datFieldHasOne('Clients', [
-          'foreignKey' => 'attributes->agent_id',
-        ]);
-
-        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents));
+        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
     }
 
     public function tearDown(): void
     {
-        unset($this->Agents);
         unset($this->Clients);
         TableRegistry::clear();
 
@@ -60,51 +60,43 @@ class HasOneTest extends TestCase
 
     public function testContain(): void
     {
-        $agents = $this->Agents->find()->contain(['Clients'])->toArray();
-        $this->assertNotEmpty($agents);
-        foreach ($agents as $agent) {
-            $this->assertNotEmpty($agent->client);
-            $this->assertEquals($agent->id, $agent->client->attributes['agent_id']);
+        $clients = $this->Clients->find()->contain(['Contacts'])->toArray();
+        $this->assertNotEmpty($clients);
+        foreach ($clients as $client) {
+            $this->assertNotEmpty($client->contact);
+            $this->assertEquals($client->id, $client->contact->attributes['client_id']);
         }
     }
 
     public function testMatching(): void
     {
-        $agents = $this->Agents->find()->matching('Clients', function ($q) {
-            return $q->where(['Clients.attributes->level >' => 1]);
+        $matching = $this->clients[0]['contact']['attributes']['mail'];
+        $clients = $this->Clients->find()->matching('Contacts', function ($q) use ($matching) {
+            return $q->where(['Contacts.attributes->mail' => $matching]);
         })->toArray();
 
-        $this->assertNotEmpty($agents);
-
-        foreach ($agents as $agent) {
-            $this->assertEquals(2, $agent->_matchingData['Clients']['attributes']['level']);
-        }
+        $this->assertEquals(1, count($clients));
+        $client = $clients[0];
+        $this->assertEquals($matching, $client->_matchingData['Contacts']['attributes->mail']);
     }
 
     public function testInnerJoinWith(): void
     {
-        $agents = $this->Agents->find()->innerJoinWith('Clients', function ($q) {
-            return $q->where(['Clients.attributes->level >' => 1]);
+        $matching = $this->clients[0]['contact']['attributes']['mail'];
+        $clients = $this->Clients->find()->innerJoinWith('Contacts', function ($q) use ($matching) {
+            return $q->where(['Contacts.attributes->mail' => $matching]);
         })->toArray();
 
-        $this->assertNotEmpty($agents);
-
-        foreach ($agents as $agent) {
-            $this->Agents->loadInto($agent, ['Clients']);
-            $this->assertEquals(2, $agent->client->{'attributes->level'});
-        }
+        $this->assertEquals(1, count($clients));
     }
 
     public function testCascadeDelete(): void
     {
-        $this->Agents->Clients->setDependent(true);
-        $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
-        $cid = $agent->client->id;
-        unset($agent->client);
+        $contact = $this->Clients->Contacts->get($this->clients[0]['contact']['id']);
+        $cid = $contact['attributes->client_id'];
 
-        $this->assertNotEmpty($this->Agents->Clients->findById($cid)->all());
-        $this->Agents->deleteOrFail($agent);
-        $this->assertEmpty($this->Agents->findById($this->agents[0]['id'])->all());
-        $this->assertEmpty($this->Agents->Clients->findById($cid)->all());
+        $client = $this->Clients->get($cid);
+        $this->Clients->deleteOrFail($client);
+        $this->assertEmpty($this->Clients->Contacts->find()->where(['id' => $contact->id])->count());
     }
 }

@@ -8,11 +8,29 @@ use Cake\I18n\FrozenTime;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
 
+/**
+ * In this test, we have a bunch of geolocation data into a separate noSQL database about vehicles and their drivers
+ * Police has found out that one of our vehicle have been seen near a crime scene
+ * We wants to find out which vehicle it was ans who was driving it
+ * Bulk geolocation data is simply imported into a Mysql Table without more processing
+ */
 class GeolocationTest extends TestCase
 {
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\AssignmentsTable
+     */
     public $Assignments;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\DriversTable
+     */
     public $Drivers;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\VehiclesTable
+     */
     public $Vehicles;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\LocationsTable
+     */
     public $Locations;
 
     public static function setUpBeforeClass(): void
@@ -32,81 +50,25 @@ class GeolocationTest extends TestCase
     {
         parent::setUp();
 
+        /** @phpstan-ignore-next-line */
         $this->Assignments = TableRegistry::get('Assignments', [
           'className' => '\Lqdt\OrmJson\Test\Model\Table\AssignmentsTable',
         ]);
 
+        /** @phpstan-ignore-next-line */
         $this->Drivers = TableRegistry::get('Drivers', [
           'className' => '\Lqdt\OrmJson\Test\Model\Table\DriversTable',
         ]);
 
+        /** @phpstan-ignore-next-line */
         $this->Vehicles = TableRegistry::get('Vehicles', [
           'className' => '\Lqdt\OrmJson\Test\Model\Table\VehiclesTable',
         ]);
 
+        /** @phpstan-ignore-next-line */
         $this->Locations = TableRegistry::get('Locations', [
           'className' => '\Lqdt\OrmJson\Test\Model\Table\LocationsTable',
         ]);
-
-        // $generator = new DataGenerator();
-        //
-        // $drivers = $generator
-        //   ->seed(0)
-        //   ->faker('id', 'uuid')
-        //   ->faker('name', 'name')
-        //   ->generate(5);
-        //
-        // $vehicles = $generator
-        //   ->clear()
-        //   ->faker('id', 'uuid')
-        //   ->callable('geocode_id', function ($data, $key, $offset) {
-        //     return '42' . (string)$offset . 'EF';
-        //   })
-        //   ->generate(8);
-        //
-        // $assignments = $generator
-        //   ->clear()
-        //   ->faker('id', 'uuid')
-        //   ->faker('driver_id', 'randomElement', array_map(function ($driver) {
-        //     return $driver['id'];
-        //   }, $drivers))
-        //   ->faker('vehicle_id', 'randomElement', array_map(function ($vehicle) {
-        //     return $vehicle['id'];
-        //   }, $vehicles))
-        //   ->faker('beginning', 'numberBetween', 1657700000, 1657799999)
-        //   ->callable('ending', function ($data) {
-        //     return (int)$data->get('beginning') + 3600;
-        //   })
-        //   ->generate(50);
-        //
-        // $locations = $generator
-        //   ->clear()
-        //   ->faker('timestamp', 'numberBetween', 1657700000, 1657799999)
-        //   ->faker('position.lat', 'randomFloat', 5, 45.5, 47.5)
-        //   ->faker('position.lon', 'randomFloat', 5, 4.5, 4.6)
-        //   ->faker('vehicle.id', 'randomElement', array_map(function ($vehicle) {
-        //     return $vehicle['geocode_id'];
-        //   }, $vehicles))
-        //   ->generate(500);
-        //
-        // $this->Drivers->saveManyOrFail($this->Drivers->newEntities($drivers));
-        // $this->Vehicles->saveManyOrFail($this->Vehicles->newEntities($vehicles));
-        // $this->Assignments->saveManyOrFail($this->Assignments->newEntities($assignments));
-        //
-        // // Manually saving locations as there's no primary key
-        // foreach ($locations as $location) {
-        //     $statement = $this->Locations
-        //       ->query()
-        //       ->insert(['data'])
-        //       ->values(['data' => $location])
-        //       ->execute();
-        //
-        //     if (!$statement->rowCount()) {
-        //         throw new \Exception();
-        //     }
-        //
-        //     $statement->closeCursor();
-        // }
     }
 
     public function tearDown(): void
@@ -121,32 +83,7 @@ class GeolocationTest extends TestCase
     }
 
     /**
-     * Checks that we can easily select all locations for a given vehicle with timestamp
-     */
-    public function testSelectingDatFieldInLocations(): void
-    {
-        $vehicles = $this->Vehicles
-          ->find()
-          ->where(['geocode_id' => '421EF'])
-          ->contain('Locations', function ($q) {
-              return $q->select([
-                'Locations.data->vehicle.id',
-                'timestamp' => 'Locations.data->timestamp',
-              ]);
-          })
-          ->all();
-
-        $this->assertEquals(1, $vehicles->count());
-        $vehicle = $vehicles->first();
-        $this->assertEquals(84, count($vehicle->locations));
-        foreach ($vehicle->locations as $location) {
-            $this->assertEquals($vehicle->geocode_id, $location->data_vehicle_id);
-            $this->assertNotEmpty($location->timestamp);
-        }
-    }
-
-    /**
-     * Here we're fetching which vehicules where in a given are a in a given period
+     * Here we're fetching which vehicules where in a given are a in a given period with the driver
      *
      * It turns out that it was 421EF and 427EF ones but only 421EF has an active driver at this time
      */
@@ -181,7 +118,7 @@ class GeolocationTest extends TestCase
     /**
      * Here, we're directly fetching drivers who are on duty on vehicles located in a given area in a given period
      *
-     * Only one was found !
+     * Only one was found ! Prof. Reece Legros IV is clearly a suspect !
      */
     public function testWhoWasThere(): void
     {
@@ -189,8 +126,7 @@ class GeolocationTest extends TestCase
         $to = FrozenTime::createFromTimestamp(1657760000);
 
         $q = $this->Drivers
-          ->useDatfields()
-          ->find()
+          ->find('json')
           ->distinct()
           ->matching('Vehicles.Locations', function ($q) use ($from, $to) {
               return $q->where([
@@ -211,6 +147,7 @@ class GeolocationTest extends TestCase
         $this->assertEquals(1, $q->count());
         $driver = $q->first();
 
+        /** @phpstan-ignore-next-line */
         $this->assertEquals('421EF', $driver->_matchingData['Vehicles']['geocode_id']);
     }
 }

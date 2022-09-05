@@ -59,12 +59,4 @@ class TranslateDatFieldTest extends TestCase
         $result = $driver->translateDatField($datfield, $unquote);
         $this->assertEquals($expected, $result->sql(new ValueBinder()));
     }
-
-    /** @dataProvider translateDatFieldMysqlData */
-    public function testTranslateDatFieldMysqlAsSql(string $datfield, bool $unquote, string $expected): void
-    {
-        $driver = $this->getDriver('Lqdt\OrmJson\Database\Driver\DatFieldMysql');
-        $result = $driver->translateDatFieldAsSql($datfield, $unquote);
-        $this->assertEquals($expected, $result);
-    }
 }

@@ -11,30 +11,47 @@ class BelongsToTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable
+     */
     public $Agents;
+
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable
+     */
     public $Clients;
 
+    /**
+     * @var array
+     */
     public $agents;
+
+    /**
+     * @var array
+     */
     public $clients;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $this->Agents = TableRegistry::get('Agents', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'agents',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable $Agents */
+        $Agents = TableRegistry::get('Agents', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\AgentsTable',
         ]);
 
-        $this->Clients = TableRegistry::get('Clients', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'clients',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable $Clients */
+        $Clients = TableRegistry::get('Clients', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\ClientsTable',
         ]);
 
+        $this->Agents = $Agents;
+        $this->Clients = $Clients;
         $generator = new DataGenerator();
 
-        // Generate agents
+        // Generate data
         $this->agents = $generator
+          ->clear()
           ->faker('id', 'uuid')
           ->faker('attributes.name', 'name')
           ->generate(3);
@@ -49,12 +66,8 @@ class BelongsToTest extends TestCase
           ->faker('attributes.name', 'name')
           ->generate(20);
 
-        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents));
-        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients));
-
-        $this->Clients->belongsTo('Agents', [
-          'foreignKey' => 'attributes->agent_id',
-        ]);
+        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
+        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
     }
 
     public function tearDown(): void
@@ -138,9 +151,10 @@ class BelongsToTest extends TestCase
         ];
 
         $client = $this->Clients->newEntity($client);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         $client = $this->Clients->saveOrFail($client);
         $this->assertNotEmpty($client->id);
         $this->assertNotEmpty($client->agent->id);
-        $this->assertEquals($client->{'attributes->agent_id'}, $client->agent->id);
+        $this->assertEquals($client['attributes->agent_id'], $client->agent->id);
     }
 }

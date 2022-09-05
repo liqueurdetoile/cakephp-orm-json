@@ -12,26 +12,42 @@ class HasManyTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable
+     */
     public $Agents;
+
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable
+     */
     public $Clients;
 
+    /**
+     * @var array
+     */
     public $agents;
+
+    /**
+     * @var array
+     */
     public $clients;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $this->Agents = TableRegistry::get('Agents', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'agents',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable $Agents */
+        $Agents = TableRegistry::get('Agents', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\AgentsTable',
         ]);
 
-        $this->Clients = TableRegistry::get('Clients', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'clients',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable $Clients */
+        $Clients = TableRegistry::get('Clients', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\ClientsTable',
         ]);
 
+        $this->Agents = $Agents;
+        $this->Clients = $Clients;
         $generator = new DataGenerator();
 
         // Generate agents
@@ -53,17 +69,12 @@ class HasManyTest extends TestCase
 
         $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents));
         $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients));
-
-        $this->Agents->DatFieldhasMany('Clients', [
-          'dependent' => true,
-          'foreignKey' => 'attributes->agent_id',
-        ]);
     }
 
     public function tearDown(): void
     {
-        $this->Agents = null;
-        $this->Clients = null;
+        unset($this->Agents);
+        unset($this->Clients);
         TableRegistry::clear();
 
         parent::tearDown();
@@ -167,19 +178,26 @@ class HasManyTest extends TestCase
         ];
 
         $agent = $this->Agents->newEntity($agent);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertNotEmpty($agent->id);
         $this->assertNotEmpty($agent->clients[0]->id);
-        $this->assertEquals($agent->clients[0]->{'attributes->agent_id'}, $agent->id);
+        $this->assertEquals($agent->clients[0]['attributes->agent_id'], $agent->id);
 
         // Test append strategy
-        $agent->clients = [$this->Clients->newEntity(['attributes' => ['name' => 'Lex Luthor']])];
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
+        $client = $this->Clients->newEntity(['attributes' => ['name' => 'Lex Luthor']]);
+        $agent->clients = [$client];
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertEquals(2, $this->Clients->find()->where(['attributes->agent_id' => $agent->id])->count());
 
         // test replace strategy
         $this->Agents->Clients->setSaveStrategy('replace');
-        $agent->clients = [$this->Clients->newEntity(['attributes' => ['name' => 'Ultron hacked !']])];
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
+        $client = $this->Clients->newEntity(['attributes' => ['name' => 'Ultron hacked !']]);
+        $agent->clients = [$client];
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertEquals(1, $this->Clients->find()->where(['attributes->agent_id' => $agent->id])->count());
     }
@@ -189,6 +207,7 @@ class HasManyTest extends TestCase
         $id = $this->agents[0]['id'];
         $agent = $this->Agents->get($id);
 
+        $this->Agents->Clients->setDependent(true);
         $this->assertNotEquals(0, $this->Clients->find()->where(['attributes->agent_id' => $id])->count());
         $this->Agents->deleteOrFail($agent);
         $this->assertEquals(0, $this->Clients->find()->where(['attributes->agent_id' => $id])->count());
@@ -199,6 +218,7 @@ class HasManyTest extends TestCase
         $agent = $this->Agents->get($this->agents[0]['id']);
         $clients = $this->Clients->find()->toArray();
         $this->Agents->Clients->link($agent, $clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(20, count($agent->clients));
@@ -206,11 +226,13 @@ class HasManyTest extends TestCase
         $agent = $this->Agents->get($this->agents[0]['id']);
         $clients = $this->Clients->find()->limit(5)->toArray();
         $this->Agents->Clients->replace($agent, $clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(5, count($agent->clients));
 
         $this->Agents->Clients->unlink($agent, $clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(0, count($agent->clients));

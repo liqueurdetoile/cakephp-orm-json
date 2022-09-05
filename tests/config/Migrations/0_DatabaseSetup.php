@@ -21,34 +21,6 @@ class DatabaseSetup extends AbstractMigration
         $table->addColumn('at2', 'json', ['null' => true]);
         $table->create();
 
-        $table = $this->table('owners', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
-        $table->addColumn('data', 'json', ['null' => true]);
-        $table->create();
-
-        $table = $this->table('buyers', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
-        $table->addColumn('data', 'json', ['null' => true]);
-        $table->create();
-
-        $table = $this->table('things', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
-        $table->addColumn('owner_id', 'uuid');
-        $table->addColumn('data', 'json', ['null' => true]);
-        $table->create();
-        $table->addForeignKey('owner_id', 'owners', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE']);
-        $table->update();
-
-        $table = $this->table('offers', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
-        $table->addColumn('buyer_id', 'uuid');
-        $table->addColumn('thing_id', 'uuid');
-        $table->addColumn('data', 'json', ['null' => true]);
-        $table->create();
-        $table->addForeignKey('buyer_id', 'buyers', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE']);
-        $table->addForeignKey('thing_id', 'things', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE']);
-        $table->update();
-
         $table = $this->table('agents', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'uuid');
         $table->addColumn('attributes', 'json', ['null' => true]);
@@ -59,17 +31,12 @@ class DatabaseSetup extends AbstractMigration
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
-        $table = $this->table('orders', ['id' => false, 'primary_key' => ['id']]);
+        $table = $this->table('contacts', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'uuid');
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
-        $table = $this->table('orders_products', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
-        $table->addColumn('attributes', 'json', ['null' => true]);
-        $table->create();
-
-        $table = $this->table('products', ['id' => false, 'primary_key' => ['id']]);
+        $table = $this->table('agents_clients', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'uuid');
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();

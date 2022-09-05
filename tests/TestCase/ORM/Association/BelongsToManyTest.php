@@ -11,81 +11,111 @@ class BelongsToManyTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
-    public $Orders;
-    public $OrdersProducts;
-    public $Products;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable $Agents
+     */
+    public $Agents;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable $Clients
+     */
+    public $Clients;
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\RelationsTable $Relations
+     */
+    public $Relations;
 
-    public $orders;
-    public $details;
-    public $products;
+    /**
+     * @var array
+     */
+    public $agents;
+    /**
+     * @var array
+     */
+    public $clients;
+    /**
+     * @var array
+     */
+    public $relations;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $this->Orders = TableRegistry::get('Orders', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'orders',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\AgentsTable $Agents */
+        $Agents = TableRegistry::get('Agents', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\AgentsTable',
         ]);
 
-        $this->OrdersProducts = TableRegistry::get('OrdersProducts', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'orders_products',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ClientsTable $Clients */
+        $Clients = TableRegistry::get('Clients', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\ClientsTable',
         ]);
 
-        $this->Products = TableRegistry::get('Products', [
-          'className' => 'Lqdt\OrmJson\Test\Model\Table\DatfieldBehaviorTable',
-          'table' => 'products',
+        /** @var \Lqdt\OrmJson\Test\Model\Table\RelationsTable $Relations */
+        $Relations = TableRegistry::get('Relations', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\RelationsTable',
+        ]);
+
+        $this->Agents = $Agents;
+        $this->Clients = $Clients;
+        $this->Relations = $Relations;
+
+        $this->Agents->datFieldBelongsToMany('Followers', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\ClientsTable',
+          'foreignKey' => 'attributes->agent_id',
+          'targetForeignKey' => 'attributes->client_id',
+          'joinTable' => 'Relations',
+          'dependent' => true,
+        ]);
+
+        $this->Clients->datFieldBelongsToMany('Vendors', [
+          'className' => 'Lqdt\OrmJson\Test\Model\Table\AgentsTable',
+          'foreignKey' => 'attributes->client_id',
+          'targetForeignKey' => 'attributes->agent_id',
+          'joinTable' => 'Relations',
+          'dependent' => true,
         ]);
 
         $generator = new DataGenerator();
 
-        // Generate orders
-        $this->orders = $generator
+        $this->agents = $generator
+          ->clear()
           ->faker('id', 'uuid')
-          ->faker('attributes.date', 'date')
+          ->faker('attributes.name', 'name')
           ->generate(5);
 
-        $this->products = $generator
+        $agents = array_map(function ($agent) {
+            return $agent['id'];
+        }, $this->agents);
+
+        $this->clients = $generator
           ->clear()
           ->faker('id', 'uuid')
-          ->faker('attributes.name', 'word')
-          ->faker('attributes.price', 'randomElement', [10, 20, 50])
+          ->faker('attributes.name', 'name')
+          ->faker('attributes.bought', 'randomElement', [100, 500, 1000])
           ->generate(20);
 
-        $this->details = $generator
+        $clients = array_map(function ($client) {
+            return $client['id'];
+        }, $this->clients);
+
+        $this->relations = $generator
           ->clear()
           ->faker('id', 'uuid')
-          ->faker('attributes.order_id', 'randomElement', array_map(function ($order) {
-            return $order['id'];
-          }, $this->orders))
-          ->faker('attributes.product_id', 'randomElement', array_map(function ($product) {
-            return $product['id'];
-          }, $this->products))
-          ->generate(50);
+          ->faker('attributes.agent_id', 'randomElement', $agents)
+          ->faker('attributes.client_id', 'randomElement', $clients)
+          ->generate(200);
 
-        $this->Products->datFieldBelongsToMany('Orders', [
-          'foreignKey' => 'attributes->product_id',
-          'targetForeignKey' => 'attributes->order_id',
-          'dependent' => true,
-        ]);
-
-        $this->Orders->datFieldBelongsToMany('Products', [
-          'foreignKey' => 'attributes->order_id',
-          'targetForeignKey' => 'attributes->product_id',
-          'dependent' => true,
-        ]);
-
-        $this->Orders->saveManyOrFail($this->Orders->newEntities($this->orders));
-        $this->OrdersProducts->saveManyOrFail($this->OrdersProducts->newEntities($this->details));
-        $this->Products->saveManyOrFail($this->Products->newEntities($this->products));
+        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
+        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
+        $this->Relations->saveManyOrFail($this->Relations->newEntities($this->relations), ['checkExisting' => false]);
     }
 
     public function tearDown(): void
     {
-        unset($this->Orders);
-        unset($this->OrdersProducts);
-        unset($this->Products);
+        unset($this->Agents);
+        unset($this->Clients);
+        unset($this->Relations);
         TableRegistry::clear();
 
         parent::tearDown();
@@ -93,39 +123,39 @@ class BelongsToManyTest extends TestCase
 
     public function testContain(): void
     {
-        $orders = $this->Orders
+        $agents = $this->Agents
           ->find()
-          ->contain('Products')
+          ->contain('Followers')
           ->toArray();
 
-        $this->assertNotEmpty($orders);
-        foreach ($orders as $order) {
-            $this->assertNotEmpty($order->products);
-            foreach ($order->products as $product) {
-                $this->assertEquals($order->id, $product->_joinData->{'attributes->order_id'});
-                $this->assertEquals($product->id, $product->_joinData->{'attributes->product_id'});
+        $this->assertNotEmpty($agents);
+        foreach ($agents as $agent) {
+            $this->assertNotEmpty($agent->followers);
+            foreach ($agent->followers as $client) {
+                $this->assertEquals($agent->id, $client->_joinData['attributes->agent_id']);
+                $this->assertEquals($client->id, $client->_joinData['attributes->client_id']);
             }
         }
     }
 
     public function testOrderedContain(): void
     {
-        $orders = $this->Orders
+        $agents = $this->Agents
           ->find()
-          ->contain('Products', function ($q) {
-              return $q->order(['Products.attributes->price']);
+          ->contain('Followers', function ($q) {
+              return $q->order(['Followers.attributes->bought']);
           })
           ->toArray();
 
-        $this->assertNotEmpty($orders);
+        $this->assertNotEmpty($agents);
 
-        foreach ($orders as $order) {
+        foreach ($agents as $agent) {
             $prev = null;
-            $this->assertNotEmpty($order->products);
-            foreach ($order->products as $product) {
+            $this->assertNotEmpty($agent->followers);
+            foreach ($agent->followers as $client) {
                 if ($prev !== null) {
-                    $this->assertTrue($product->{'attributes->price'} <= $prev);
-                    $prev = $product->{'attributes->price'};
+                    $this->assertTrue($client->{'attributes->bought'} <= $prev);
+                    $prev = $client->{'attributes->bought'};
                 }
             }
         }
@@ -133,131 +163,139 @@ class BelongsToManyTest extends TestCase
 
     public function testFilteredContain(): void
     {
-        $orders = $this->Orders
+        $agents = $this->Agents
           ->find()
-          ->contain('Products', function ($q) {
-              return $q->where(['Products.attributes->price >' => 10]);
+          ->contain('Followers', function ($q) {
+              return $q->where(['Followers.attributes->bought >' => 100]);
           })
           ->toArray();
 
-        $this->assertNotEmpty($orders);
+        $this->assertNotEmpty($agents);
 
-        foreach ($orders as $order) {
-            $this->assertNotEmpty($order->products);
-            foreach ($order->products as $product) {
-                $this->assertTrue($product->{'attributes->price'} > 10);
+        foreach ($agents as $agent) {
+            $this->assertNotEmpty($agent->followers);
+            foreach ($agent->followers as $client) {
+                $this->assertTrue($client->{'attributes->bought'} > 100);
             }
         }
     }
 
     public function testMatching(): void
     {
-        $name = $this->products[0]['attributes']['name'];
+        $name = $this->clients[0]['attributes']['name'];
 
-        $orders = $this->Orders
+        $agents = $this->Agents
           ->find()
-          ->matching('Products', function ($q) use ($name) {
-              return $q->where(['Products.attributes->name' => $name]);
+          ->matching('Followers', function ($q) use ($name) {
+              return $q->where(['Followers.attributes->name' => $name]);
           })
           ->toArray();
 
-        $this->assertNotEmpty($orders);
+        $this->assertNotEmpty($agents);
 
-        foreach ($orders as $order) {
-            $this->assertEquals($name, $order->_matchingData['Products']['attributes']['name']);
+        foreach ($agents as $agent) {
+            $this->assertEquals($name, $agent->_matchingData['Followers']['attributes->name']);
         }
     }
 
     public function testInnerJoinWith(): void
     {
-        $name = $this->products[0]['attributes']['name'];
+        $cid = $this->clients[0]['id'];
+        $name = $this->clients[0]['attributes']['name'];
 
-        $orders = $this->Orders
+        $agents = $this->Agents
           ->find()
-          ->innerJoinWith('Products', function ($q) use ($name) {
-              return $q->where(['Products.attributes->name' => $name]);
+          ->distinct()
+          ->innerJoinWith('Followers', function ($q) use ($name) {
+              return $q->where(['Followers.attributes->name' => $name]);
           })
           ->toArray();
 
-        $this->assertNotEmpty($orders);
+        $this->assertNotEmpty($agents);
 
-        $product = $this->Orders->Products->find()->where(['attributes->name' => $name])->contain(['Orders'])->firstOrFail();
+        foreach ($agents as $agent) {
+            $q = $this->Relations->find()
+              ->where([
+                ['attributes->agent_id' => $agent->id],
+                ['attributes->client_id' => $cid],
+              ]);
 
-        $this->assertEquals(count($orders), count($product->orders));
+            $this->assertNotEmpty($q->count());
+        }
     }
 
     public function testSaveAssociated()
     {
-        $order = [
-          'attributes' => ['date' => '2022-07-13'],
-          'products' => [
+        $agent = [
+          'attributes' => ['name' => 'Batman'],
+          'followers' => [
             ['attributes' => ['name' => 'Superman']],
             ['attributes' => ['name' => 'Loïs Lane']],
           ],
         ];
 
-        $order = $this->Orders->newEntity($order);
-        $order = $this->Orders->saveOrFail($order);
+        $agent = $this->Agents->newEntity($agent);
+        $agent = $this->Agents->saveOrFail($agent);
 
-        $this->assertNotEmpty($order->id);
-        $this->assertEquals(2, count($order->products));
-        foreach ($order->products as $product) {
-            $this->assertNotEmpty($product->id);
-            $this->assertEquals($order->id, $product->_joinData->{'attributes->order_id'});
-            $this->assertEquals($product->id, $product->_joinData->{'attributes->product_id'});
+        $this->assertNotEmpty($agent->id);
+        $this->assertEquals(2, count($agent->followers));
+        foreach ($agent->followers as $client) {
+            $this->assertNotEmpty($client->id);
+            $this->assertEquals($agent->id, $client->_joinData->{'attributes->agent_id'});
+            $this->assertEquals($client->id, $client->_joinData->{'attributes->client_id'});
         }
 
         // Append mode
-        $this->Orders->Products->setSaveStrategy('append');
-        $order->products = $this->Products->newEntities([['attributes' => ['name' => 'Lex Luthor']]]);
-        $order->setDirty('products', true);
-        $order = $this->Orders->saveOrFail($order);
-        $order = $this->Orders->loadInto($order, ['Products']);
+        $this->Agents->Followers->setSaveStrategy('append');
+        $agent->followers = $this->Clients->newEntities([['attributes' => ['name' => 'Lex Luthor']]]);
+        $agent->setDirty('followers', true);
+        $agent = $this->Agents->saveOrFail($agent);
+        $agent = $this->Agents->loadInto($agent, ['Followers']);
 
-        $this->assertEquals(3, count($order->products));
+        $this->assertEquals(3, count($agent->followers));
 
-        // Replace mode
-        $this->Orders->Products->setSaveStrategy('replace');
-        $order->products = $this->Products->newEntities([['attributes' => ['name' => 'Ultron hacked !']]]);
-        $order->setDirty('products', true);
-        $order = $this->Orders->saveOrFail($order);
-        $order = $this->Orders->loadInto($order, ['Products']);
+        // // Replace mode
+        $this->Agents->Followers->setSaveStrategy('replace');
+        $agent->followers = $this->Clients->newEntities([['attributes' => ['name' => 'Ultron hacked !']]]);
+        $agent->setDirty('followers', true);
+        $agent = $this->Agents->saveOrFail($agent);
+        $agent = $this->Agents->loadInto($agent, ['Followers']);
 
-        $this->assertEquals(1, count($order->products));
+        $this->assertEquals(1, count($agent->followers));
     }
 
     public function testCascadeDelete(): void
     {
-        $id = $this->orders[0]['id'];
-        $order = $this->Orders->get($id);
+        $id = $this->agents[0]['id'];
+        $agent = $this->Agents->get($id);
 
-        $this->assertNotEquals(0, $this->OrdersProducts->find()->where(['attributes->order_id' => $id])->count());
-        $this->Orders->deleteOrFail($order);
-        $this->assertEquals(0, $this->OrdersProducts->find()->where(['attributes->order_id' => $id])->count());
+        $this->assertNotEquals(0, $this->Relations->find()->where(['attributes->agent_id' => $id])->count());
+        $this->Agents->deleteOrFail($agent);
+        $this->assertEquals(0, $this->Relations->find()->where(['attributes->agent_id' => $id])->count());
     }
 
     public function testLinkReplaceLinksAndUnlink(): void
     {
-        $id = $this->orders[0]['id'];
-        $order = $this->Orders->get($id, ['contain' => ['Products']]);
+        $id = $this->agents[0]['id'];
+        $agent = $this->Agents->get($id, ['contain' => ['Followers']]);
 
-        $this->assertEquals(9, count($order->products));
+        $this->assertNotEquals(0, count($agent->followers));
 
-        $this->Orders->Products->unlink($order, $order->products);
-        $order = $this->Orders->get($id, ['contain' => ['Products']]);
+        $this->Agents->Followers->unlink($agent, $agent->followers);
+        $agent = $this->Agents->get($id, ['contain' => ['Followers']]);
 
-        $this->assertEquals(0, count($order->products));
+        $this->assertEquals(0, count($agent->followers));
 
-        $products = $this->Products->find()->toArray();
-        $this->Orders->Products->link($order, $products);
-        $order = $this->Orders->get($id, ['contain' => ['Products']]);
+        $clients = $this->Clients->find()->toArray();
+        $this->Agents->Followers->link($agent, $clients);
+        $agent = $this->Agents->get($id, ['contain' => ['Followers']]);
 
-        $this->assertEquals(20, count($order->products));
+        $this->assertEquals(20, count($agent->followers));
 
-        $products = $this->Products->find()->limit(5)->toArray();
-        $this->Orders->Products->replaceLinks($order, $products);
-        $order = $this->Orders->get($id, ['contain' => ['Products']]);
+        $clients = $this->Clients->find()->limit(5)->toArray();
+        $this->Agents->Followers->replaceLinks($agent, $clients);
+        $agent = $this->Agents->get($id, ['contain' => ['Followers']]);
 
-        $this->assertEquals(5, count($order->products));
+        $this->assertEquals(5, count($agent->followers));
     }
 }
