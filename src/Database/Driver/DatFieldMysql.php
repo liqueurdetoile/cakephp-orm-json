@@ -4,11 +4,13 @@ declare(strict_types=1);
 namespace Lqdt\OrmJson\Database\Driver;
 
 use Cake\Database\Driver\Mysql;
+use Cake\Database\Expression\ComparisonExpression;
 use Cake\Database\Expression\FunctionExpression;
 use Cake\Database\ExpressionInterface;
-use Cake\Database\ValueBinder;
+use Cake\Database\Query;
 use Lqdt\OrmJson\Database\DatFieldDriverInterface;
 use Lqdt\OrmJson\Database\Expression\DatFieldExpression;
+use Lqdt\OrmJson\Database\JsonTypeMap;
 use Lqdt\OrmJson\DatField\Exception\UnparsableDatFieldException;
 
 class DatFieldMysql extends Mysql implements DatFieldDriverInterface
@@ -35,13 +37,9 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
                 return $datfield;
             }
 
-            ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield, $repository);
-            $field = $model ? implode('.', [$model, $field]) : $field;
-          // Avoid adding a starting dot in path if querying an array or using joker
-            $path = in_array($path[0], ['[', '*']) ? '$' . $path : implode('.', ['$', $path]);
-            $path = "'" . $path . "'";
+            ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield);
 
-            $expr = new FunctionExpression('JSON_EXTRACT', [$field => 'identifier', $path => 'literal']);
+            $expr = new FunctionExpression('JSON_EXTRACT', [$doc => 'identifier', $path => 'literal']);
 
             $expr = $unquote ? new FunctionExpression('JSON_UNQUOTE', [$expr]) : $expr;
             $expr = new DatFieldExpression([$expr]);
@@ -55,31 +53,50 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
     /**
      * @inheritDoc
      */
-    public function translateDatFieldAsSql($datfield, bool $unquote = false, ?string $repository = null): string
-    {
-        try {
-            if ($datfield instanceof DatFieldExpression) {
-                return $datfield->sql(new ValueBinder());
-            }
+    public function translateSetDatField(
+        ComparisonExpression $expr,
+        Query $query,
+        JsonTypeMap $map
+    ): ComparisonExpression {
+        $datfield = $expr->getField();
 
-            ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield, $repository);
-            $field = $model ? implode('.', [$model, $field]) : $field;
-          // Avoid adding a starting dot in path if querying an array or using joker
-            $path = in_array($path[0], ['[', '*']) ? '$' . $path : implode('.', ['$', $path]);
-            $path = "'" . $path . "'";
+        if (!$this->isDatField($datfield)) {
+            // We still need to apply JSON types if field is a JSON field
+            $casters = $map->getCasters($query);
+            $row = [$datfield => $expr->getValue()];
+            $row = $this->_castRow($row, $casters, $query);
+            $expr->setValue($row[$datfield]);
 
-            $expr = new FunctionExpression('JSON_EXTRACT', [$field => 'identifier', $path => 'literal']);
-
-            $expr = $unquote ? new FunctionExpression('JSON_UNQUOTE', [$expr]) : $expr;
-            $expr = new DatFieldExpression([$expr]);
-
-            return $expr->sql(new ValueBinder());
-        } catch (UnparsableDatFieldException $err) {
-            if (is_string($datfield)) {
-                return $datfield;
-            }
-
-            throw $err;
+            return $expr;
         }
+
+        $field = $this->getDatFieldPart('field', $datfield);
+        ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield);
+        $caster = $map->getCaster($datfield, $query);
+        $value = $this->_castValue($expr->getValue(), $query, $caster);
+        $expr->setField($field);
+        $expr->setValue(new FunctionExpression('JSON_SET', [$doc => 'identifier', $path => 'literal', $value]));
+
+        return $expr;
+    }
+
+    /**
+     * Utility function to parse needed parts for JSON_EXTRACT or JSON_SET functions
+     *
+     * @param  string $datfield Datfield
+     * @return array            Parts as doc and path
+     */
+    protected function _extractJsonParts(string $datfield): array
+    {
+        ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield);
+        $field = $model ? implode('.', [$model, $field]) : $field;
+        // Avoid adding a starting dot in path if querying an array or using joker
+        $path = in_array($path[0], ['[', '*']) ? '$' . $path : implode('.', ['$', $path]);
+        $path = "'" . $path . "'";
+
+        return [
+          'doc' => $field,
+          'path' => $path,
+        ];
     }
 }

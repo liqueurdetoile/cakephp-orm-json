@@ -103,6 +103,7 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
+                debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 
@@ -286,11 +287,6 @@ trait DatFieldSqlDialectTrait
         // Translate select clause
         if ($datFieldsEnabled) {
             $query->traverse(function ($part, $clause) use ($query, $map, &$selectmap) {
-                // if (!empty($part)) {
-                //     debug($clause);
-                //     debug($part);
-                // }
-                // Translate select statement
                 if ($clause === 'select' && !empty($part)) {
                     $query = $this->_translateSelect($query, $selectmap);
                 }
@@ -298,7 +294,7 @@ trait DatFieldSqlDialectTrait
                 // Translate group clause
                 if ($clause === 'group' && !empty($part)) {
                     $query = $query->group(array_map(function ($field) use ($map) {
-                        return $this->translateDatFieldAsSql($field, (bool)$map->type($field));
+                        return (string)$this->translateDatField($field, (bool)$map->type($field));
                     }, $part), true);
                 }
 
@@ -370,18 +366,15 @@ trait DatFieldSqlDialectTrait
         // Update query type map
         $map = new JsonTypeMap($query->getTypeMap());
         $query->setTypeMap($map->getRegularTypeMap());
-        $casters = $map->getCasters($query, 'toDatabase');
 
         // We need to apply JSON type map to outgoing data
         $set = $query->clause('set');
-        $set->traverse(function ($expr) use ($casters, $query) {
+        $set->iterateParts(function ($expr) use ($query, $map) {
             if ($expr instanceof ComparisonExpression) {
-                /** @var string $key */
-                $key = $expr->getField();
-                $row = [$key => $expr->getValue()];
-                $row = $this->_castRow($row, $casters, $query);
-                $expr->setValue($row[$key]);
+                return $this->translateSetDatField($expr, $query, $map);
             }
+
+            return $expr;
         });
 
         // No where parsing if datfields are disabled
@@ -502,7 +495,7 @@ trait DatFieldSqlDialectTrait
         $field = $expression->getIdentifier();
 
         if ($this->isDatField($field)) {
-            $field = $this->translateDatFieldAsSql($field, true);
+            $field = (string)$this->translateDatField($field, true);
             $expression->setIdentifier($field);
         }
 
@@ -522,7 +515,7 @@ trait DatFieldSqlDialectTrait
         Query $query,
         JsonTypeMap $jsonTypes
     ): QueryExpression {
-        $datfield = $this->translateDatFieldAsSql($datfield);
+        $datfield = (string)$this->translateDatField($datfield);
 
         return $query->newExpr()->or([
             "{$datfield} IS" => null,
@@ -540,7 +533,7 @@ trait DatFieldSqlDialectTrait
      */
     protected function _translateIsNotNull(string $datfield, Query $query, JsonTypeMap $jsonTypes): QueryExpression
     {
-        $datfield = $this->translateDatFieldAsSql($datfield);
+        $datfield = (string)$this->translateDatField($datfield);
 
         return $query->newExpr("{$datfield} <> CAST('null' AS JSON)");
     }
@@ -564,11 +557,11 @@ trait DatFieldSqlDialectTrait
             }
 
             if ($this->isDatField($fieldOrOrder)) {
-                return $this->translateDatFieldAsSql($fieldOrOrder);
+                return (string)$this->translateDatField($fieldOrOrder);
             }
 
             if ($this->isDatField($key)) {
-                $key = $this->translateDatFieldAsSql($key);
+                $key = (string)$this->translateDatField($key);
             }
 
             return $fieldOrOrder;

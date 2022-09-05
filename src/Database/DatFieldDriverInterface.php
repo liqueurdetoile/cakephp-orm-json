@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Lqdt\OrmJson\Database;
 
 use Cake\Database\DriverInterface;
+use Cake\Database\Expression\ComparisonExpression;
+use Cake\Database\Query;
 
 interface DatFieldDriverInterface extends DriverInterface
 {
@@ -32,17 +34,18 @@ interface DatFieldDriverInterface extends DriverInterface
     );
 
     /**
-     * Translates a datfield notation into a valid driver dependent SQL snippet that allows
-     * to identify and target data into a JSON field.
+     * Translates a SET comparison expression to directly update JSON data based on datfield
      *
-     * @param string|\Lqdt\OrmJson\Database\Expression\DatFieldExpression $datfield Datfield
-     * @param  bool     $unquote                  If `true`, returned data should be unquoted
-     * @param  ?string  $repository               Repository alias
-     * @return string
+     * It is used for UPDATE statements
+     *
+     * @param \Cake\Database\Expression\ComparisonExpression $expr Expression
+     * @param \Cake\Database\Query $query Query
+     * @param \Lqdt\OrmJson\Database\JsonTypeMap $map JSON type map
+     * @return \Cake\Database\Expression\ComparisonExpression Updated expression
      */
-    public function translateDatFieldAsSql(
-        $datfield,
-        bool $unquote = false,
-        ?string $repository = null
-    ): string;
+    public function translateSetDatField(
+        ComparisonExpression $expr,
+        Query $query,
+        JsonTypeMap $map
+    ): ComparisonExpression;
 }
