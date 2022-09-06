@@ -16,19 +16,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['7.1', '7.4', '8.0', '8.2']
+        php-version: ['7.2', '7.4', '8.0', '8.1', '8.2']
         db-family: ['mysql']
         db-version: ['mysql-5.7']
         include:
           - php-version: '7.4'
             db-family: 'mysql'
             db-version: 'mysql-8'
-          - php-version: '7.4'
-            db-family: 'mariadb'
-            db-version: '10.2'
-          - php-version: '7.4'
-            db-family: 'mariadb'
-            db-version: 'latest'
+          # - php-version: '7.4'
+          #   db-family: 'mariadb'
+          #   db-version: '10.2'
+          # - php-version: '7.4'
+          #   db-family: 'mariadb'
+          #   db-version: 'latest'
 
     steps:
     - uses: actions/checkout@v3
