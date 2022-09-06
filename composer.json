@@ -30,20 +30,20 @@
     ],
     "require": {
         "php": "^7.2|^8.0",
-        "cakephp/cakephp": "^3.5|^4.0",
-        "adbario/php-dot-notation": "^2.0",
+        "cakephp/cakephp": ">=4.3.5",
+        "adbario/php-dot-notation": "^2.1",
         "mustache/mustache": "^2.13"
     },
     "require-dev": {
-        "phpunit/phpunit": "^8.5 || ^9.3",
-        "phpstan/phpstan": "^0.12|^1.8",
+        "phpunit/phpunit": "^8.5|^9.3",
+        "phpstan/phpstan": "^1.8",
         "phpstan/extension-installer": "^1.1",
         "cakephp/cakephp-codesniffer": "^4.5",
-        "cakephp/migrations": "@stable",
-        "vierge-noire/cakephp-test-suite-light": "^1.0|^2.0",
+        "cakephp/migrations": "^3.2",
+        "vierge-noire/cakephp-test-suite-light": "^2.4",
+        "fakerphp/faker": "^1.20",
         "cakedc/cakephp-phpstan": "^2.0",
-        "phpstan/phpstan-phpunit": "^1.1",
-        "fakerphp/faker": "^1.20"
+        "phpstan/phpstan-phpunit": "^1.1"
     },
     "autoload": {
         "psr-4": {
