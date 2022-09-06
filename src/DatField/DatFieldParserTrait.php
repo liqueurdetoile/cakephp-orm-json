@@ -246,7 +246,7 @@ trait DatFieldParserTrait
           strtolower($this->renderFromDatFieldAndTemplate(
               $datfield,
               '{{field}}{{separator}}{{path}}',
-              '_',
+              '_'
           )) :
           $datfield;
     }
