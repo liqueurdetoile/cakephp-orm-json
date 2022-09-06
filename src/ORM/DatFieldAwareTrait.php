@@ -42,6 +42,10 @@ trait DatFieldAwareTrait
      */
     public function datFieldBelongsTo(string $associated, array $options = []): DatFieldBelongsTo
     {
+        if (!$this instanceof Table) {
+            throw new \RuntimeException('DatFieldAwareTrait can only be used on a Table instance');
+        }
+
         $options += ['sourceTable' => $this];
 
         /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo $association */
@@ -55,6 +59,10 @@ trait DatFieldAwareTrait
      */
     public function datFieldHasOne(string $associated, array $options = []): DatFieldHasOne
     {
+        if (!$this instanceof Table) {
+            throw new \RuntimeException('DatFieldAwareTrait can only be used on a Table instance');
+        }
+
         $options += ['sourceTable' => $this];
 
         /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasOne $association */
@@ -68,6 +76,10 @@ trait DatFieldAwareTrait
      */
     public function datFieldHasMany(string $associated, array $options = []): DatFieldHasMany
     {
+        if (!$this instanceof Table) {
+            throw new \RuntimeException('DatFieldAwareTrait can only be used on a Table instance');
+        }
+
         $options += ['sourceTable' => $this];
 
         /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasMany $association */
@@ -81,6 +93,10 @@ trait DatFieldAwareTrait
      */
     public function datFieldBelongsToMany(string $associated, array $options = []): DatFieldBelongsToMany
     {
+        if (!$this instanceof Table) {
+            throw new \RuntimeException('DatFieldAwareTrait can only be used on a Table instance');
+        }
+
         $options += ['sourceTable' => $this];
 
         /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsToMany $association */

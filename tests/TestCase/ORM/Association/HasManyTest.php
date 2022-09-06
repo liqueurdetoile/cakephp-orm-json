@@ -178,26 +178,21 @@ class HasManyTest extends TestCase
         ];
 
         $agent = $this->Agents->newEntity($agent);
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertNotEmpty($agent->id);
         $this->assertNotEmpty($agent->clients[0]->id);
         $this->assertEquals($agent->clients[0]['attributes->agent_id'], $agent->id);
 
         // Test append strategy
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         $client = $this->Clients->newEntity(['attributes' => ['name' => 'Lex Luthor']]);
         $agent->clients = [$client];
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertEquals(2, $this->Clients->find()->where(['attributes->agent_id' => $agent->id])->count());
 
         // test replace strategy
         $this->Agents->Clients->setSaveStrategy('replace');
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         $client = $this->Clients->newEntity(['attributes' => ['name' => 'Ultron hacked !']]);
         $agent->clients = [$client];
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->saveOrFail($agent);
         $this->assertEquals(1, $this->Clients->find()->where(['attributes->agent_id' => $agent->id])->count());
     }
@@ -218,7 +213,6 @@ class HasManyTest extends TestCase
         $agent = $this->Agents->get($this->agents[0]['id']);
         $clients = $this->Clients->find()->toArray();
         $this->Agents->Clients->link($agent, $clients);
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(20, count($agent->clients));
@@ -226,13 +220,11 @@ class HasManyTest extends TestCase
         $agent = $this->Agents->get($this->agents[0]['id']);
         $clients = $this->Clients->find()->limit(5)->toArray();
         $this->Agents->Clients->replace($agent, $clients);
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(5, count($agent->clients));
 
         $this->Agents->Clients->unlink($agent, $clients);
-        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         $agent = $this->Agents->get($this->agents[0]['id'], ['contain' => ['Clients']]);
 
         $this->assertEquals(0, count($agent->clients));

@@ -5,7 +5,6 @@ namespace Lqdt\OrmJson\Test\TestCase\Database\Driver;
 
 use Cake\Datasource\ConnectionManager;
 use Cake\TestSuite\TestCase as RootTestCase;
-use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
 use Lqdt\OrmJson\Test\Fixture\DataGenerator;
 
 /**
@@ -18,7 +17,7 @@ class TestCase extends RootTestCase
     /**
      * Test connection
      *
-     * @var \Cake\Datasource\ConnectionInterface
+     * @var \Cake\Database\Connection
      */
     public $connection;
 
@@ -38,8 +37,10 @@ class TestCase extends RootTestCase
     {
         parent::setUp();
 
-        $trait = $this->getObjectForTrait(DatFieldAwareTrait::class);
-        $this->connection = $trait->getUpgradedConnectionForDatFields(ConnectionManager::get('test'));
+        $trait = new \Lqdt\OrmJson\Test\Model\DatFieldAware();
+        /** @var \Cake\Database\Connection $connection */
+        $connection = ConnectionManager::get('test');
+        $this->connection = $trait->getUpgradedConnectionForDatFields($connection);
         $this->generator = new DataGenerator();
     }
 }

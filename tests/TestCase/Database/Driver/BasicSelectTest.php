@@ -66,6 +66,7 @@ class BasicSelectTest extends TestCase
           ->static('attributes.arrayobject', [['a' => 'a'], ['a' => 'b']])
           ->generate(1);
 
+        /** @phpstan-ignore-next-line */
         $this->connection->insert('objects', $this->row, $this->types);
     }
 
@@ -92,6 +93,7 @@ class BasicSelectTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertEquals(null, $results[0]['attributes']['null']);
         $this->assertEquals(true, $results[0]['attributes']['boolean']);
         $this->assertEquals(10, $results[0]['attributes']['int']);
@@ -119,6 +121,7 @@ class BasicSelectTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertEquals('b8b04734-5ea1-4220-9798-58edef3ffcd7', $results[0]['id']);
         $this->assertEquals(true, $results[0]['attributes_boolean']);
         $this->assertInstanceOf(FrozenTime::class, $results[0]['datetime']);

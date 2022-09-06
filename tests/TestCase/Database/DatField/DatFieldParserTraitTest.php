@@ -14,7 +14,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * Mocked trait
      *
-     * @var \Lqdt\OrmJson\Tests\Model\DatFieldParser
+     * @var \Lqdt\OrmJson\Test\Model\DatFieldParser
      */
     public $parser;
 
@@ -116,7 +116,11 @@ class DatFieldParserTraitTest extends TestCase
         $this->assertSame($expected, $this->parser->getDatFieldValueInData($key, $data, $throwIfMissing));
     }
 
-    /** @dataProvider getDatFieldValueInDataData */
+    /**
+     * @param string $key       Field or Datfield
+     * @param array|\Cake\ORM\Entity $data      Data
+     * @dataProvider getDatFieldValueInDataData
+     */
     public function testHasDatFieldPathInData($key, $data): void
     {
         $missing = strpos($key, 'missing') !== false;
@@ -154,8 +158,13 @@ class DatFieldParserTraitTest extends TestCase
         ];
     }
 
-    /** @dataProvider hasReferenceWithGetDatFieldValueInDataData */
-    public function testHasReferenceWithGetDatFieldValueInData($key, $data, $expected): void
+    /**
+     * @dataProvider hasReferenceWithGetDatFieldValueInDataData
+     * @param string $key       [description]
+     * @param array  $data      [description]
+     * @param array|string $expected  [description]
+     */
+    public function testHasReferenceWithGetDatFieldValueInData(string $key, array $data, $expected): void
     {
         // We must generate entity differently as it will hacked by reference if set up in data provider
         $entity = new Entity($data);
@@ -334,7 +343,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider isDatFieldData
      */
-    public function testIsDatField($field, $expected): void
+    public function testIsDatField(string $field, int $expected): void
     {
         $this->assertEquals($expected, $this->parser->isDatField($field));
     }
@@ -365,7 +374,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider parseDatFieldData
      */
-    public function testParseDatField($datfield, $expected, $repository = null): void
+    public function testParseDatField(string $datfield, array $expected, ?string $repository = null): void
     {
         $this->assertEquals($expected, $this->parser->parseDatField($datfield, $repository));
     }
@@ -382,7 +391,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider renderFromDatFieldAndTemplateData
      */
-    public function testRenderFromDatFieldAndTemplate($datfield, $template, $separator, $expected): void
+    public function testRenderFromDatFieldAndTemplate(string $datfield, string $template, string $separator, string $expected): void
     {
         $this->assertEquals($expected, $this->parser->renderFromDatFieldAndTemplate($datfield, $template, $separator));
     }

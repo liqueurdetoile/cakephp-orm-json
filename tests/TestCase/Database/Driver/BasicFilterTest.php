@@ -14,6 +14,9 @@ class BasicFilterTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var array
+     */
     public $types = [
       'id' => 'uuid',
       'attributes' => 'json',
@@ -78,6 +81,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertEquals(50, count($results));
 
         $results = $this->connection->newQuery()
@@ -88,6 +92,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertEquals(0, count($results));
     }
 
@@ -116,7 +121,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnNullData */
-    public function testWhereOnNull($clauses, $expector): void
+    public function testWhereOnNull(array $clauses, callable $expector): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -130,6 +135,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $this->assertTrue($expector($row));
@@ -183,7 +189,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnBooleanData */
-    public function testWhereOnBoolean($clauses, $expector): void
+    public function testWhereOnBoolean(array $clauses, callable $expector): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -197,6 +203,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -298,7 +305,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnIntegerData */
-    public function testWhereOnInteger($clauses, $expector): void
+    public function testWhereOnInteger(array $clauses, callable $expector): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -312,6 +319,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -361,7 +369,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnDoubleData */
-    public function testWhereOnDouble($clauses, $expector): void
+    public function testWhereOnDouble(array $clauses, callable $expector): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -375,6 +383,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -458,7 +467,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnStringData */
-    public function testWhereOnString($clauses, $expector): void
+    public function testWhereOnString(array $clauses, callable $expector): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -472,6 +481,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -494,6 +504,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -516,6 +527,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);
@@ -545,7 +557,7 @@ class BasicFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnDateData */
-    public function testWhereOnDate($clauses, $expector, $types = []): void
+    public function testWhereOnDate(array $clauses, callable $expector, array $types = []): void
     {
         $query = $this->connection->newQuery();
         $map = $query->getSelectTypeMap();
@@ -560,6 +572,7 @@ class BasicFilterTest extends TestCase
           ->execute()
           ->fetchAll('assoc');
 
+        $this->assertNotFalse($results);
         $this->assertNotEmpty($results);
         foreach ($results as $row) {
             $object = new DatFieldEntity($row);

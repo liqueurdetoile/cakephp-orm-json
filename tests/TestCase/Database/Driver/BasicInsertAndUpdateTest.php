@@ -92,8 +92,9 @@ class BasicInsertAndUpdateTest extends TestCase
 
         $this->connection->insert('objects', $data, $this->types);
 
-        $row = $this->connection->execute('SELECT * FROM objects')->fetchAll('assoc')[0];
-        $attributes = json_decode($row['attributes'], true);
+        $row = $this->connection->execute('SELECT * FROM objects')->fetchAll('assoc');
+        $this->assertNotFalse($row);
+        $attributes = json_decode($row[0]['attributes'], true);
 
         $this->assertEquals(null, $attributes['null']);
         $this->assertEquals(true, $attributes['boolean']);
@@ -116,9 +117,10 @@ class BasicInsertAndUpdateTest extends TestCase
             $this->types + ['at2' => 'json']
         );
 
-        $row = $this->connection->execute('SELECT * FROM objects')->fetchAll('assoc')[0];
-        $attributes = json_decode($row['attributes'], true);
-        $at2 = json_decode($row['at2'], true);
+        $row = $this->connection->execute('SELECT * FROM objects')->fetchAll('assoc');
+        $this->assertNotFalse($row);
+        $attributes = json_decode($row[0]['attributes'], true);
+        $at2 = json_decode($row[0]['at2'], true);
 
         $this->assertEquals(null, $attributes['null']);
         $this->assertEquals(true, $attributes['boolean']);

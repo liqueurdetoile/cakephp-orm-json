@@ -37,7 +37,7 @@ interface DatFieldTableSchemaInterface extends TableSchemaInterface
      * Permanently register JSON type(s) in schema
      *
      * @param array|string $types  Datfield to type or array of [<datfield> => <type definition>,...]
-     * @param array|null   $type   Type definition
+     * @param array|string|null   $type   Type definition
      * @return void
      */
     public function setJsonTypes($types, $type = null): void;

@@ -8,6 +8,8 @@ use Lqdt\OrmJson\Test\Model\Entity\Client;
 /**
  * @property \Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo $Agents
  * @property \Lqdt\OrmJson\ORM\Association\DatFieldHasOne $Contacts
+ * @method \Lqdt\OrmJson\Test\Model\Entity\Client newEntity(array $data, array $options = [])
+ * @method \Lqdt\OrmJson\Test\Model\Entity\Client[] newEntities(array $data, array $options = [])
  */
 class ClientsTable extends DatfieldBehaviorTable
 {

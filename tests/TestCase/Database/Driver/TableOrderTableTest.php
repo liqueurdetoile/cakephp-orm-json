@@ -14,8 +14,19 @@ class TableOrderTableTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable
+     */
     public $Objects;
+
+    /**
+     * @var array
+     */
     public $data = [];
+
+    /**
+     * @var iterable<\Cake\Datasource\EntityInterface>
+     */
     public $objects;
 
     /**
@@ -26,7 +37,9 @@ class TableOrderTableTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        $this->Objects = $Objects;
         $this->data = $this->generator
           ->clear()
           ->faker('attributes.number', 'randomNumber')
@@ -80,6 +93,9 @@ class TableOrderTableTest extends TestCase
     }
 
     /**
+     * @param string|string[] $order  Order clause
+     * @param string $field  Path to data
+     * @param int $sort   Sort order
      * @dataProvider dataOrder
      */
     public function testOrder($order, $field, $sort): void

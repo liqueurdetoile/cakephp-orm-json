@@ -7,5 +7,10 @@ parameters:
     checkGenericClassInNonGenericObjectType: false
     paths:
         - src
-    excludes_analyse:
-        - src/Console/Installer.php
+        - tests
+
+services:
+  -
+    class:  Lqdt\OrmJson\PHPStan\CurlyDatFieldNotation
+    tags:
+      - phpstan.broker.propertiesClassReflectionExtension

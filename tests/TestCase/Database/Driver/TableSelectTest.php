@@ -13,9 +13,15 @@ class TableSelectTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable
+     */
     public $Objects;
-    public $data = [];
-    public $objects;
+
+    /**
+     * @var array
+     */
+    public $row = [];
 
     /**
      * setUp method
@@ -25,7 +31,9 @@ class TableSelectTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        $this->Objects = $Objects;
 
         // Let's insert a row whith each data type
         $this->row = $this->generator
@@ -44,6 +52,7 @@ class TableSelectTest extends TestCase
           ->static('attributes.arrayobject', [['a' => 'a'], ['a' => 'b']])
           ->generate(1);
 
+        /** @phpstan-ignore-next-line */
         $this->connection->insert('objects', $this->row, [
           'id' => 'uuid',
           'attributes' => 'json',

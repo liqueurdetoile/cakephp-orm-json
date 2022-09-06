@@ -294,6 +294,7 @@ trait DatFieldSqlDialectTrait
                 // Translate group clause
                 if ($clause === 'group' && !empty($part)) {
                     $query = $query->group(array_map(function ($field) use ($map) {
+                        /** @phpstan-ignore-next-line */
                         return (string)$this->translateDatField($field, (bool)$map->type($field));
                     }, $part), true);
                 }
@@ -495,6 +496,7 @@ trait DatFieldSqlDialectTrait
         $field = $expression->getIdentifier();
 
         if ($this->isDatField($field)) {
+            /** @phpstan-ignore-next-line */
             $field = (string)$this->translateDatField($field, true);
             $expression->setIdentifier($field);
         }
@@ -515,6 +517,7 @@ trait DatFieldSqlDialectTrait
         Query $query,
         JsonTypeMap $jsonTypes
     ): QueryExpression {
+        /** @phpstan-ignore-next-line */
         $datfield = (string)$this->translateDatField($datfield);
 
         return $query->newExpr()->or([
@@ -533,6 +536,7 @@ trait DatFieldSqlDialectTrait
      */
     protected function _translateIsNotNull(string $datfield, Query $query, JsonTypeMap $jsonTypes): QueryExpression
     {
+        /** @phpstan-ignore-next-line */
         $datfield = (string)$this->translateDatField($datfield);
 
         return $query->newExpr("{$datfield} <> CAST('null' AS JSON)");
@@ -557,10 +561,12 @@ trait DatFieldSqlDialectTrait
             }
 
             if ($this->isDatField($fieldOrOrder)) {
+                /** @phpstan-ignore-next-line */
                 return (string)$this->translateDatField($fieldOrOrder);
             }
 
             if ($this->isDatField($key)) {
+                /** @phpstan-ignore-next-line */
                 $key = (string)$this->translateDatField($key);
             }
 
@@ -718,43 +724,4 @@ trait DatFieldSqlDialectTrait
 
         return $expression;
     }
-
-    /**
-     * @inheritDoc
-     */
-    // protected function _removeAliasesFromConditions(Query $query): Query
-    // {
-    //     if ($query->clause('join')) {
-    //         throw new \RuntimeException(
-    //             'Aliases are being removed from conditions for UPDATE/DELETE queries, ' .
-    //             'this can break references to joined tables.'
-    //         );
-    //     }
-    //
-    //     $conditions = $query->clause('where');
-    //     if ($conditions) {
-    //         $conditions->traverse(
-    //             function ($condition) {
-    //                 if (!($condition instanceof Comparison)) {
-    //                     return $condition;
-    //                 }
-    //
-    //                 $field = $condition->getField();
-    //                 if (is_array($field) || $field instanceof ExpressionInterface || strpos($field, '.') === false) {
-    //                     return $condition;
-    //                 }
-    //
-    //                 $parts = explode('.', $field);
-    //                 array_shift($parts);
-    //                 // Override is required here as native function is breaking datfield notation
-    //                 // list(, $field) = explode('.', $field);
-    //                 $condition->setField(implode('.', $parts));
-    //
-    //                 return $condition;
-    //             }
-    //         );
-    //     }
-    //
-    //     return $query;
-    // }
 }

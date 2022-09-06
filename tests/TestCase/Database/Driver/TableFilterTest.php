@@ -13,8 +13,19 @@ class TableFilterTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable
+     */
     public $Objects;
+
+    /**
+     * @var array
+     */
     public $data = [];
+
+    /**
+     * @var iterable<\Cake\Datasource\EntityInterface>
+     */
     public $objects;
 
     /**
@@ -25,7 +36,9 @@ class TableFilterTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        $this->Objects = $Objects;
         $this->data = $this->generator
           ->clear()
           ->faker('attributes.mixed', 'randomElement', [null, true, false, 'bar', 'baz'])
@@ -94,7 +107,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnNullData */
-    public function testWhereOnNull($clauses, $expector): void
+    public function testWhereOnNull(array $clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -151,7 +164,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnBooleanData */
-    public function testWhereOnBoolean($clauses, $expector): void
+    public function testWhereOnBoolean(array $clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -246,7 +259,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnIntegerData */
-    public function testWhereOnInteger($clauses, $expector): void
+    public function testWhereOnInteger(array $clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -297,7 +310,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnDoubleData */
-    public function testWhereOnDouble($clauses, $expector): void
+    public function testWhereOnDouble(array $clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -382,7 +395,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnStringData */
-    public function testWhereOnString($clauses, $expector): void
+    public function testWhereOnString(array $clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -433,7 +446,7 @@ class TableFilterTest extends TestCase
     }
 
     /** @dataProvider whereOnDateData */
-    public function testWhereOnDate($clauses, $expector, $types = null): void
+    public function testWhereOnDate(array $clauses, callable $expector, ?array $types = null): void
     {
         $q = $this->Objects->find('all', ['jsonTypeMap' => $types])->where($clauses);
         $objects = $q->all();

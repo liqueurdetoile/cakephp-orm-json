@@ -60,6 +60,10 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
     ): ComparisonExpression {
         $datfield = $expr->getField();
 
+        if (!is_string($datfield)) {
+            return $expr;
+        }
+
         if (!$this->isDatField($datfield)) {
             // We still need to apply JSON types if field is a JSON field
             $casters = $map->getCasters($query);

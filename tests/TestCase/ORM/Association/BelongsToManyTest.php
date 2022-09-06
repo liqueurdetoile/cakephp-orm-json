@@ -150,13 +150,12 @@ class BelongsToManyTest extends TestCase
         $this->assertNotEmpty($agents);
 
         foreach ($agents as $agent) {
-            $prev = null;
             $this->assertNotEmpty($agent->followers);
             foreach ($agent->followers as $client) {
-                if ($prev !== null) {
+                if (isset($prev)) {
                     $this->assertTrue($client->{'attributes->bought'} <= $prev);
-                    $prev = $client->{'attributes->bought'};
                 }
+                $prev = $client->{'attributes->bought'};
             }
         }
     }
@@ -224,7 +223,7 @@ class BelongsToManyTest extends TestCase
         }
     }
 
-    public function testSaveAssociated()
+    public function testSaveAssociated(): void
     {
         $agent = [
           'attributes' => ['name' => 'Batman'],
@@ -241,8 +240,8 @@ class BelongsToManyTest extends TestCase
         $this->assertEquals(2, count($agent->followers));
         foreach ($agent->followers as $client) {
             $this->assertNotEmpty($client->id);
-            $this->assertEquals($agent->id, $client->_joinData->{'attributes->agent_id'});
-            $this->assertEquals($client->id, $client->_joinData->{'attributes->client_id'});
+            $this->assertEquals($agent->id, $client->_joinData['attributes->agent_id']);
+            $this->assertEquals($client->id, $client->_joinData['attributes->client_id']);
         }
 
         // Append mode

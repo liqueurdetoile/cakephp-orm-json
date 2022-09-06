@@ -13,6 +13,9 @@ class TableAggregationsTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable
+     */
     public $Objects;
 
     /**
@@ -23,7 +26,9 @@ class TableAggregationsTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        $this->Objects = $Objects;
     }
 
     /**

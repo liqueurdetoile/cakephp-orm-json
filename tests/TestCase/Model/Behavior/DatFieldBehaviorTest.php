@@ -20,7 +20,10 @@ class DatFieldBehaviorTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => ObjectsTable::class]);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => ObjectsTable::class]);
+
+        $this->Objects = $Objects;
     }
 
     public function tearDown(): void

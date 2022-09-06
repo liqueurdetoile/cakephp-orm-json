@@ -12,6 +12,9 @@ class TableFunctionsTest extends TestCase
 {
     use \CakephpTestSuiteLight\Fixture\TruncateDirtyTables;
 
+    /**
+     * @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable
+     */
     public $Objects;
 
     /**
@@ -22,7 +25,9 @@ class TableFunctionsTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        /** @var \Lqdt\OrmJson\Test\Model\Table\ObjectsTable $Objects */
+        $Objects = TableRegistry::get('Objects', ['className' => 'Lqdt\OrmJson\Test\Model\Table\ObjectsTable']);
+        $this->Objects = $Objects;
     }
 
     /**
@@ -50,6 +55,7 @@ class TableFunctionsTest extends TestCase
         $q = $this->Objects->find();
         $q->select(['count' => $q->func()->count('attributes->item')]);
 
+        /** @phpstan-ignore-next-line */
         $this->assertEquals(10, $q->first()->count);
     }
 
@@ -65,6 +71,7 @@ class TableFunctionsTest extends TestCase
         $q = $this->Objects->find();
         $q->select(['total' => $q->func()->sum('attributes->n')]);
 
+        /** @phpstan-ignore-next-line */
         $this->assertEquals(10, $q->first()->total);
     }
 }

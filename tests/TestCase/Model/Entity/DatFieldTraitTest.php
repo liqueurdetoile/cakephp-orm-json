@@ -39,6 +39,12 @@ class DatFieldTraitTest extends TestCase
         $e->set('data->test', 'updated');
         $this->assertEquals('updated', $e->{'data->test'});
 
+        $e->{'data->test'} = 'again';
+        $this->assertEquals('again', $e->get('data->test'));
+
+        $e['data->test'] = 'and again';
+        $this->assertEquals('and again', $e->get('data->test'));
+
         $this->assertTrue($e->isDirty());
         $this->assertTrue($e->isDirty('data'));
         $this->assertTrue($e->isDirty('data->test'));
@@ -46,16 +52,16 @@ class DatFieldTraitTest extends TestCase
 
         $e->clean();
         $this->assertFalse($e->isDirty());
-        $this->assertSame(['test' => 'updated'], $e->getOriginal('data'));
+        $this->assertSame(['test' => 'and again'], $e->getOriginal('data'));
 
         $e->set('data->new', 'created');
-        $this->assertEquals('updated', $e->{'data->test'});
+        $this->assertEquals('and again', $e->{'data->test'});
         $this->assertEquals('created', $e->{'data->new'});
         $this->assertTrue($e->isDirty());
         $this->assertTrue($e->isDirty('data'));
         $this->assertTrue($e->isDirty('data->new'));
         $this->assertFalse($e->isDirty('data->test'));
-        $this->assertSame(['test' => 'updated'], $e->getOriginal('data'));
+        $this->assertSame(['test' => 'and again'], $e->getOriginal('data'));
     }
 
     public function testHas(): void
