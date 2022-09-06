@@ -21,10 +21,14 @@ jobs:
         db-version: ['mysql-5.7']
         include:
           - php-version: '7.4'
+            db-family: 'mysql'
             db-version: 'mysql-8'
           - php-version: '7.4'
             db-family: 'mariadb'
-            db-version: ['10.2', 'latest']
+            db-version: '10.2'
+          - php-version: '7.4'
+            db-family: 'mariadb'
+            db-version: 'latest'
 
     steps:
     - uses: actions/checkout@v3
@@ -39,7 +43,7 @@ jobs:
 
     - name: Setup MariaDB
       uses: getong/mariadb-action@v1.1
-      if: matrix.db-type == 'mariadb'
+      if: matrix.db-family == 'mariadb'
       with:
         mariadb version: ${{ matrix.db-version }}
         mysql database: 'cakephp_orm_json'
@@ -85,7 +89,7 @@ jobs:
     - name: Run PHPUnit
       run: |
         if [[ ${{ matrix.db-family }} == 'mysql' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
-        if [[ ${{ matrix.db-type }} == 'mariadb' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
+        if [[ ${{ matrix.db-family }} == 'mariadb' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
         vendor/bin/phpunit
 
     - name: Run PHP CodeSniffer
