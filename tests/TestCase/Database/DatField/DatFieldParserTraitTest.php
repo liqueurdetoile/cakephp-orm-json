@@ -343,7 +343,7 @@ class DatFieldParserTraitTest extends TestCase
     /**
      * @dataProvider isDatFieldData
      */
-    public function testIsDatField(string $field, int $expected): void
+    public function testIsDatField(?string $field, int $expected): void
     {
         $this->assertEquals($expected, $this->parser->isDatField($field));
     }

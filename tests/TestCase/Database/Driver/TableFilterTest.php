@@ -163,8 +163,12 @@ class TableFilterTest extends TestCase
         ];
     }
 
-    /** @dataProvider whereOnBooleanData */
-    public function testWhereOnBoolean(array $clauses, callable $expector): void
+    /**
+     * @dataProvider whereOnBooleanData
+     * @param array|\Closure    $clauses   [description]
+     * @param callable $expector  [description]
+     */
+    public function testWhereOnBoolean($clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -258,8 +262,12 @@ class TableFilterTest extends TestCase
         ];
     }
 
-    /** @dataProvider whereOnIntegerData */
-    public function testWhereOnInteger(array $clauses, callable $expector): void
+    /**
+     * @dataProvider whereOnIntegerData
+     * @param array|\Closure    $clauses   [description]
+     * @param callable $expector  [description]
+     */
+    public function testWhereOnInteger($clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -309,8 +317,12 @@ class TableFilterTest extends TestCase
         ];
     }
 
-    /** @dataProvider whereOnDoubleData */
-    public function testWhereOnDouble(array $clauses, callable $expector): void
+    /**
+     * @dataProvider whereOnDoubleData
+     * @param array|\Closure    $clauses   [description]
+     * @param callable $expector  [description]
+     */
+    public function testWhereOnDouble($clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();
@@ -394,8 +406,12 @@ class TableFilterTest extends TestCase
         ];
     }
 
-    /** @dataProvider whereOnStringData */
-    public function testWhereOnString(array $clauses, callable $expector): void
+    /**
+     * @dataProvider whereOnStringData
+     * @param array|\Closure    $clauses   [description]
+     * @param callable $expector  [description]
+     */
+    public function testWhereOnString($clauses, callable $expector): void
     {
         $q = $this->Objects->find()->where($clauses);
         $objects = $q->all();

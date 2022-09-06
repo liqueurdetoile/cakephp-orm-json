@@ -18,13 +18,11 @@ include_once 'config/common.php';
 $dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
 
 // Database configuration and
-$db_url = env('DB_URL', $dsn);
-putenv('DB_URL=' . $dsn);
 putenv('TESTING=1');
 
 // Creates test connection
 ConnectionManager::setConfig('test', [
-  'url' => getenv('DB_URL'),
+  'url' => env('DB_URL', $dsn),
   'tableSniffer' => MysqlTriggerBasedTableSniffer::class,
 ]);
 

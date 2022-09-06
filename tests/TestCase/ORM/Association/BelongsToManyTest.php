@@ -151,10 +151,9 @@ class BelongsToManyTest extends TestCase
 
         foreach ($agents as $agent) {
             $this->assertNotEmpty($agent->followers);
+            $prev = 0;
             foreach ($agent->followers as $client) {
-                if (isset($prev)) {
-                    $this->assertTrue($client->{'attributes->bought'} <= $prev);
-                }
+                $this->assertTrue($client->{'attributes->bought'} >= $prev);
                 $prev = $client->{'attributes->bought'};
             }
         }
