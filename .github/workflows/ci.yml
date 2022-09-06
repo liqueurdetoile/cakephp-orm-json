@@ -34,7 +34,7 @@ jobs:
       if: matrix.db-family == 'mysql'
       uses: shogo82148/actions-setup-mysql@v1
       with:
-        mysql-version: matrix.db-version
+        mysql-version: ${{ matrix.db-version }}
         root-password: 'root'
 
     - run: mysql -u root -p root -e 'CREATE DATABASE cakephp_orm_json' | export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'
