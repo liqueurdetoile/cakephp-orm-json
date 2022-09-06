@@ -17,8 +17,7 @@ include_once 'config/common.php';
 // Just update to match your testing database configuration
 $dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
 
-// Database configuration and
-putenv('TESTING=1');
+debug(env('DB_URL', $dsn));
 
 // Creates test connection
 ConnectionManager::setConfig('test', [
