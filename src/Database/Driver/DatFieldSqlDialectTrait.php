@@ -609,7 +609,7 @@ trait DatFieldSqlDialectTrait
 
                 return (string)$expr;
             },
-            $fragment,
+            $fragment
         );
     }
 
