@@ -36,7 +36,7 @@ class DatFieldParserTraitTest extends TestCase
         $this->assertEquals('test.var', $this->parser->getDatFieldPart('path', 'data->test.var'));
         $this->assertEquals('Objects', $this->parser->getDatFieldPart('model', 'Objects.data->test.var'));
         $this->assertEquals('Objects', $this->parser->getDatFieldPart('model', 'test@Objects.data'));
-        $this->expectException(\ValueError::class);
+        $this->expectException(\Exception::class);
         $this->parser->getDatFieldPart('silly', 'test@data');
     }
 

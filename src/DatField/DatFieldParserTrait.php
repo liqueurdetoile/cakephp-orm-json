@@ -262,7 +262,7 @@ trait DatFieldParserTrait
     public function getDatFieldPart(string $part, string $datfield, ?string $repository = null): ?string
     {
         if (!in_array($part, ['model', 'field', 'path'])) {
-            throw new \ValueError(
+            throw new \Exception(
                 'Requested part in DatField is not valid. It must be one between model, field or path'
             );
         }
