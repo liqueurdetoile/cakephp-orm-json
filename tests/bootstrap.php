@@ -16,7 +16,7 @@ include_once 'config/common.php';
 // Build DSN for local/CI testing
 switch (env('DB_FAMILY')) {
     case 'mysql':
-        $dsn = 'mysql://root:root@127.0.01/cake_orm_json';
+        $dsn = 'mysql://root:root@127.0.01/cakephp_orm_json';
         $sniffer = MysqlTriggerBasedTableSniffer::class;
         break;
     default:
