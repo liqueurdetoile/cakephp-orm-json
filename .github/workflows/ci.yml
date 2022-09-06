@@ -20,7 +20,10 @@ jobs:
         db-family: ['mysql']
         db-version: ['mysql-5.7']
         coverage: ['none']
+        prefer-lowest: ['no']
         include:
+          - php-version: '7.2'
+            prefer-lowest: 'yes'
           - php-version: '7.4'
             db-family: 'mysql'
             db-version: 'mysql-8'
@@ -81,7 +84,7 @@ jobs:
 
     - name: Composer install
       run: |
-        if ${{ matrix.prefer-lowest == 'prefer-lowest' }}; then
+        if ${{ matrix.prefer-lowest == 'yes' }}; then
           composer update --prefer-lowest --prefer-stable
         elif ${{ matrix.php-version == '8.2' }}; then
           composer update --ignore-platform-req=php
