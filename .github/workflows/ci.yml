@@ -7,25 +7,24 @@ on:
   pull_request:
     branches:
       - '*'
-#  schedule:
-#    - cron: "0 0 1 * *"
+  schedule:
+    - cron: "0 0 1 * *"
 
 jobs:
   testsuite:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['7.4']
+        php-version: ['7.1', '7.4', '8.0', '8.2']
         db-family: ['mysql']
         db-version: ['mysql-5.7']
-        # include:
-        #   - php-version: '7.4'
-        #     db-version: 'mysql-5.7'
-          # - php-version: '7.4'
-          #   db-type: 'mariadb-10.2'
-          # - php-version: '7.4'
-          #   db-type: 'mariadb-10.9'
+        include:
+          - php-version: '7.4'
+            db-version: 'mysql-8'
+          - php-version: '7.4'
+            db-family: 'mariadb'
+            db-version: ['10.2', 'latest']
 
     steps:
     - uses: actions/checkout@v3
@@ -33,6 +32,18 @@ jobs:
     - name: Setup MySQL 5.7
       if: matrix.db-version == 'mysql-5.7'
       run: docker run --rm --name=mysqld -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cakephp_orm_json -p 3306:3306 -d mysql:5.7 --character-set-server=utf8
+
+    - name: Setup MySQL 8 (latest)
+      if: matrix.db-version == 'mysql-8'
+      run: docker run --rm --name=mysqld -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cakephp_orm_json -p 3306:3306 -d mysql --default-authentication-plugin=mysql_native_password --disable-log-bin
+
+    - name: Setup MariaDB
+      uses: getong/mariadb-action@v1.1
+      if: matrix.db-type == 'mariadb'
+      with:
+        mariadb version: ${{ matrix.db-version }}
+        mysql database: 'cakephp_orm_json'
+        mysql root password: 'root'
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -67,13 +78,14 @@ jobs:
           composer update
         fi
 
-    - name: Wait for MySQL
-      if: matrix.db-family == 'mysql'
+    - name: Wait for MySQL/MariaDB
+      if: matrix.db-family == 'mysql' || matrix.db-family == 'mariadb'
       run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
 
     - name: Run PHPUnit
       run: |
         if [[ ${{ matrix.db-family }} == 'mysql' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
+        if [[ ${{ matrix.db-type }} == 'mariadb' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
         vendor/bin/phpunit
 
     - name: Run PHP CodeSniffer
