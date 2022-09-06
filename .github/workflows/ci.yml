@@ -37,7 +37,7 @@ jobs:
         mysql-version: ${{ matrix.db-version }}
         root-password: 'root'
 
-    - run: mysql -u root -p root -h3306 -e 'CREATE DATABASE cakephp_orm_json' | export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'
+    - run: mysql -u root -p root -h 3306 -e 'CREATE DATABASE cakephp_orm_json' && export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
