@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\Database\Driver;
 
-use Cake\Database\Driver\SqlDialectTrait;
 use Cake\Database\Expression\BetweenExpression;
 use Cake\Database\Expression\ComparisonExpression;
 use Cake\Database\Expression\IdentifierExpression;
@@ -24,11 +23,6 @@ trait DatFieldSqlDialectTrait
 {
     use DatFieldParserTrait {
         DatFieldParserTrait::isDatField as protected _isDatFieldString;
-    }
-
-    use SqlDialectTrait {
-        SqlDialectTrait::quoteIdentifier as protected _parentQuoteIdentifier;
-        SqlDialectTrait::queryTranslator as protected _parentQueryTranslator;
     }
 
     /** @inheritDoc */
@@ -74,7 +68,7 @@ trait DatFieldSqlDialectTrait
             return implode(', ', $arguments);
         }
 
-        return $this->_parentQuoteIdentifier($identifier);
+        return parent::QuoteIdentifier($identifier);
     }
 
     /**
@@ -108,7 +102,7 @@ trait DatFieldSqlDialectTrait
             }
 
             // Apply original driver translator transformations
-            $parentTranslator = $this->_parentQueryTranslator($type);
+            $parentTranslator = parent::QueryTranslator($type);
             $query = $parentTranslator($query);
 
             return $query;
@@ -187,7 +181,7 @@ trait DatFieldSqlDialectTrait
      */
     protected function _getAliasFromQuery(Query $query): ?string
     {
-        if ($query instanceof OrmQuery) {
+        if ($query instanceof ORMQuery) {
             return $query->getRepository()->getAlias();
         }
 
