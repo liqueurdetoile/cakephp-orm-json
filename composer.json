@@ -59,7 +59,8 @@
     "scripts": {
         "test": "phpunit && phpstan analyze --memory-limit 1G",
         "doc": "php phpDocumentor.phar -d ./src -t ./docs/api",
-        "stan": "phpstan analyze --memory-limit 1G"
+        "stan": "phpstan analyze --memory-limit 1G",
+        "stan-github": "phpstan analyze --memory-limit 1G --error-format=github"
     },
     "config": {
         "allow-plugins": {

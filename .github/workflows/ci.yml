@@ -82,4 +82,4 @@ jobs:
 
     - name: Run PHPstan
       if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-5.7'}}
-      run: composer stan --error-format=github
+      run: composer stan-github
