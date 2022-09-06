@@ -46,6 +46,7 @@ class CurlyDatFieldNotation implements PropertiesClassReflectionExtension
             $field = $this->getDatFieldPart('field', $propertyName);
 
             if (!$classReflection->hasProperty($field)) {
+                    /** @phpstan-ignore-next-line */
                     throw new MissingPropertyFromReflectionException($classReflection->getName(), $field);
             }
 

@@ -8,9 +8,4 @@ use Cake\ORM\Table;
 class DatfieldsTable extends Table
 {
     use \Lqdt\OrmJson\ORM\DatFieldAwareTrait;
-
-    public function initialize(array $config): void
-    {
-        // $this->setTable('objects');
-    }
 }

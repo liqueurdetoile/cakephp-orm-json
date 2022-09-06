@@ -246,7 +246,10 @@ trait DatFieldAwareTrait
 
         $classname = $classname ?? TableSchema::class;
 
-        return new $classname($schema->name(), $columns);
+        /** @var \Cake\Database\Schema\TableSchemaInterface $schema */
+        $schema = new $classname($schema->name(), $columns);
+
+        return $schema;
     }
 
     /**
@@ -272,7 +275,10 @@ trait DatFieldAwareTrait
 
         $classname = $classname ?? DatFieldTableSchema::class;
 
-        return new $classname($schema->name(), $columns);
+        /** @var \Lqdt\OrmJson\Database\Schema\DatFieldTableSchemaInterface $schema */
+        $schema = new $classname($schema->name(), $columns);
+
+        return $schema;
     }
 
     /**

@@ -450,13 +450,16 @@ trait DatFieldSqlDialectTrait
      *
      * @version 1.0.4
      * @since   1.5.0
-     * @param \Cake\Database\Expression\Comparison|\Cake\Database\Expression\ComparisonExpression $expression ComparisonExpression expression
+     * @param \Cake\Database\Expression\ComparisonExpression $expression ComparisonExpression expression
      * @param \Cake\Database\Query $query Query
      * @param \Lqdt\OrmJson\Database\JsonTypeMap $jsonTypes JSON type map
      * @return \Cake\Database\Expression\ComparisonExpression|\Cake\Database\Expression\QueryExpression Updated expression
      */
-    protected function _translateComparisonExpression($expression, Query $query, JsonTypeMap $jsonTypes)
-    {
+    protected function _translateComparisonExpression(
+        ComparisonExpression $expression,
+        Query $query,
+        JsonTypeMap $jsonTypes
+    ) {
         $field = $expression->getField();
 
         // Checks if it's a datfield and transform value if needed

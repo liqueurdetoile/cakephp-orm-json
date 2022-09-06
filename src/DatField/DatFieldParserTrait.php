@@ -217,11 +217,7 @@ trait DatFieldParserTrait
                 try {
                     $chunk = &$this->getDatFieldValueInData(implode('.', $current), $data, true);
                 } catch (MissingPathInDataDatFieldException $err) {
-                    if (!empty($node)) {
-                        $chunk = &$this->_createNodeInChunk($node, $chunk);
-                    } else {
-                        throw new UnparsableDatFieldException('Empty datfield');
-                    }
+                    $chunk = &$this->_createNodeInChunk($node, $chunk);
                 }
             }
         }

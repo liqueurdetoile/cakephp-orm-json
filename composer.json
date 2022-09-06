@@ -29,21 +29,21 @@
       "filter"
     ],
     "require": {
-        "php": "^7.1|^8.0",
+        "php": "^7.2|^8.0",
         "cakephp/cakephp": "^3.5|^4.0",
         "adbario/php-dot-notation": "^2.0",
         "mustache/mustache": "^2.13"
     },
     "require-dev": {
-        "fzaninotto/faker": "^1.9",
         "phpunit/phpunit": "^8.5 || ^9.3",
-        "phpstan/phpstan": "^0.12",
-        "raul338/cakephp-phpstan-extensions": "^2.1",
+        "phpstan/phpstan": "^0.12|^1.8",
         "phpstan/extension-installer": "^1.1",
         "cakephp/cakephp-codesniffer": "^4.5",
         "cakephp/migrations": "@stable",
         "vierge-noire/cakephp-test-suite-light": "^1.0|^2.0",
-        "phpstan/phpstan-phpunit": "^0.12.16"
+        "cakedc/cakephp-phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^1.1",
+        "fakerphp/faker": "^1.20"
     },
     "autoload": {
         "psr-4": {
