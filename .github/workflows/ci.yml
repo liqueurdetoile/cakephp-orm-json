@@ -30,6 +30,11 @@ jobs:
           #   db-family: 'mariadb'
           #   db-version: 'latest'
 
+    env:
+      PHP_VERSION: ${{ matrix.php-version }}
+      DB_FAMILY: ${{ matrix.db-family }}
+      DB_VERSION: ${{ matrix.db-version }}
+
     steps:
     - uses: actions/checkout@v3
 
@@ -86,11 +91,8 @@ jobs:
       if: matrix.db-family == 'mysql' || matrix.db-family == 'mariadb'
       run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
 
-    - name: Run PHPUnit
-      run: |
-        if [[ ${{ matrix.db-family }} == 'mysql' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
-        if [[ ${{ matrix.db-family }} == 'mariadb' ]]; then export DB_URL='mysql://root:root@127.0.0.1/cakephp_orm_json'; fi
-        vendor/bin/phpunit
+    - name: Run PHPUnit (No coverage)
+      run: vendor/bin/phpunit
 
     - name: Run PHP CodeSniffer
       if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-5.7'}}

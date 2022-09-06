@@ -30,16 +30,14 @@ class DatFieldAwareTraitTest extends TestCase
 
         $this->assertEquals('test_dfm', $connection->configName());
         $this->assertInstanceOf(DatFieldMysql::class, $connection->getDriver());
-        /** @phpstan-ignore-next-line */
-        $this->assertInstanceOf(DatFieldTableSchemaInterface::class, $table->getSchema());
+        // $this->assertInstanceOf(DatFieldTableSchemaInterface::class, $table->getSchema());
 
         // Permanently downgrade connection for this instance
         $connection = $table->useDatFields(false)->getConnection();
 
         $this->assertEquals('test', $connection->configName());
         $this->assertNotInstanceOf(DatFieldMysql::class, $connection->getDriver());
-        /** @phpstan-ignore-next-line */
-        $this->assertNotInstanceOf(DatFieldTableSchemaInterface::class, $table->getSchema());
+        // $this->assertNotInstanceOf(DatFieldTableSchemaInterface::class, $table->getSchema());
 
         // Upgrade connection only or this query
         $q = $table->find('datfields');

@@ -13,14 +13,22 @@ use Migrations\TestSuite\Migrator;
  */
 include_once 'config/common.php';
 
-// Fallback dsn for local testing
-// Just update to match your testing database configuration
-$dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
+// Build DSN for local/CI testing
+switch (env('DB_FAMILY')) {
+    case 'mysql':
+        $dsn = 'mysql://root:root@127.0.01/cake_orm_json';
+        $sniffer = MysqlTriggerBasedTableSniffer::class;
+        break;
+    default:
+      // Fallback on local config. Should ne updated as needed
+        $dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
+        $sniffer = MysqlTriggerBasedTableSniffer::class;
+}
 
 // Creates test connection
 ConnectionManager::setConfig('test', [
   'url' => env('DB_URL', $dsn),
-  'tableSniffer' => MysqlTriggerBasedTableSniffer::class,
+  'tableSniffer' => $sniffer,
 ]);
 
 // Run migrations

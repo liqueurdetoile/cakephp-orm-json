@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- This is the 4.x configuration With no coverage -->
+<!-- This is the 4.x configuration for PHP 7.2 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" colors="true" processIsolation="false" stopOnFailure="false" bootstrap="tests/bootstrap.php" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
   <php>
     <ini name="memory_limit" value="-1"/>
     <ini name="apc.enable_cli" value="1"/>
   </php>
+  <coverage processUncoveredFiles="true">
+    <include>
+      <directory suffix=".php">./src</directory>
+    </include>
+  </coverage>  
   <testsuites>
     <testsuite name="cakephp-orm-json">
       <directory>tests/TestCase/</directory>
