@@ -67,12 +67,12 @@ interface DatFieldTableSchemaInterface extends TableSchemaInterface
      *
      * @return self
      */
-    public function clearJsonTypes(): self;
+    public function clearJsonTypes();
 
     /**
      * Clears transient JSON types
      *
      * @return self
      */
-    public function clearTransientJsonTypes(): self;
+    public function clearTransientJsonTypes();
 }
