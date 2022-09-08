@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\DatField;
 
-use Adbar\Dot;
 use Cake\ORM\Entity;
 use Lqdt\OrmJson\DatField\Exception\MissingPathInDataDatFieldException;
 use Lqdt\OrmJson\DatField\Exception\UnparsableDatFieldException;
@@ -326,9 +325,8 @@ trait DatFieldParserTrait
 
             // Merge unmodified values in JSON field
             if (is_array($previous) && is_array($current)) {
-                $previous = new Dot($previous);
-                $previous->mergeRecursiveDistinct($current);
-                $entity->set($field, $previous->all());
+                $previous = array_merge_recursive($previous, $current);
+                $entity->set($field, $previous);
             }
         }
 

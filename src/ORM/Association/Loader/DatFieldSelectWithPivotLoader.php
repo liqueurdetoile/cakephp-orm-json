@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Lqdt\OrmJson\ORM\Association\Loader;
 
 use Cake\ORM\Association\Loader\SelectWithPivotLoader;
-use Cake\ORM\Query;
 use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 
 class DatFieldSelectWithPivotLoader extends SelectWithPivotLoader
@@ -14,7 +13,7 @@ class DatFieldSelectWithPivotLoader extends SelectWithPivotLoader
     /**
      * @inheritDoc
      */
-    protected function _buildResultMap(Query $fetchQuery, array $options): array
+    protected function _buildResultMap($fetchQuery, $options): array
     {
         $resultMap = [];
         $key = (array)$options['foreignKey'];

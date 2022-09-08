@@ -97,7 +97,7 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
-                debug($err);
+                // debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 

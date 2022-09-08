@@ -61,7 +61,7 @@ trait DatFieldTrait
             if ($this->isDatField($name)) {
                 $field = $this->getDatFieldPart('field', $name);
 
-                if (!array_key_exists($field, $this->_fields)) {
+                if (!array_key_exists($field, $this->_getFields())) {
                     continue;
                 }
 
@@ -70,7 +70,7 @@ trait DatFieldTrait
                 }
 
                 if (!array_key_exists($field, $this->_original)) {
-                    $this->_original[$field] = $this->_fields[$field];
+                    $this->_original[$field] = $this->_getFields()[$field];
                 }
 
                 $this->deleteDatFieldValueInData($name, $this);
@@ -90,7 +90,7 @@ trait DatFieldTrait
      * @param   string  $field    Field or Datfield name
      * @return  mixed             Field value (by reference)
      */
-    public function &get(string $field)
+    public function &get($field)
     {
         if ($this->isDatField($field)) {
             $value = &$this->getDatFieldValueInData($field, $this, false);
@@ -109,7 +109,7 @@ trait DatFieldTrait
      * @param string $field Field or Datfield name
      * @return bool
      */
-    public function isAccessible(string $field): bool
+    public function isAccessible($field): bool
     {
         if ($this->isDatField($field)) {
             $key = $this->_getDatFieldKey($field);
@@ -128,7 +128,7 @@ trait DatFieldTrait
      * @param string|null $field The field to check the status for. Null for the whole entity.
      * @return bool Whether the field was changed or not
      */
-    public function isDirty(?string $field = null): bool
+    public function isDirty($field = null): bool
     {
         return $this->_isDirty($this->_getDatFieldKey($field));
     }
@@ -139,7 +139,7 @@ trait DatFieldTrait
      * @param  string|array<string>   $keys Fields to merge
      * @return self
      */
-    public function jsonMerge($keys): self
+    public function jsonMerge($keys = ['*']): self
     {
         $this->_jsonMerge($this, $keys);
 
@@ -189,10 +189,10 @@ trait DatFieldTrait
             // Stores original field
             if (
                 !array_key_exists($name, $this->_original) &&
-                array_key_exists($name, $this->_fields) &&
+                array_key_exists($name, $this->_getFields()) &&
                 $this->get($key) !== $value
             ) {
-                $this->_original[$name] = $this->_fields[$name];
+                $this->_original[$name] = $this->_getFields()[$name];
             }
 
             $this->setDatFieldValueInData($key, $value, $this);
@@ -210,7 +210,7 @@ trait DatFieldTrait
      * mark it as protected.
      * @return $this
      */
-    public function setAccess($field, bool $set)
+    public function setAccess($field, $set)
     {
         if ($field === '*') {
             return $this->_setAccess($field, $set);
@@ -237,7 +237,7 @@ trait DatFieldTrait
      * it was not changed. Defaults to true.
      * @return $this
      */
-    public function setDirty(string $field, bool $isDirty = true)
+    public function setDirty($field, $isDirty = true)
     {
         if (!$this->isDatField($field)) {
             if ($isDirty === false) {
@@ -289,7 +289,7 @@ trait DatFieldTrait
             if ($this->isDatField($field)) {
                 $field = $this->getDatFieldPart('field', $name);
 
-                if (!array_key_exists($field, $this->_fields)) {
+                if (!array_key_exists($field, $this->_getFields())) {
                     continue;
                 }
 
@@ -302,10 +302,20 @@ trait DatFieldTrait
                 unset($this->_original[$field]);
             } else {
                 // We don't use parent method to avoid compatibility issues
-                unset($this->_fields[$field], $this->_original[$field], $this->_dirty[$field]);
+                unset($this->_getFields()[$field], $this->_original[$field], $this->_dirty[$field]);
             }
         }
 
         return $this;
+    }
+
+    /**
+     * Utility method to enable compatibility
+     *
+     * @return array
+     */
+    protected function _getFields(): array
+    {
+        return $this->_properties ?? $this->_fields;
     }
 }

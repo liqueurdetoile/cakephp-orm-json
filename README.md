@@ -204,7 +204,7 @@ $data = $table->find()->where(['attributes->key' => 'key'])->first();
 $data = $table->find()->where(['attributes->really.deep.number >=' => 10])->first();
 $data = $table->find()->where(['attributes->key LIKE' => '%key%', 'attributes->really.deep.nested.key' => 'deep.nested.key'])->first();
 
-// Looking for null will return all fields where key is missing or equals to null
+// Looking for null will return all fields where key is missing or equals to null as default behavior
 $data = $table->find()->where(['attributes->fool IS' => null])->first();
 
 // Query builder is also fine
@@ -215,6 +215,10 @@ $data = $table
    })
    ->first();
 ```
+
+When filtering on null values, default behavior is to consider that any record that don't have the target path in its JSON field also fulfills `IS NULL` condition. To avoid this, you can pass `['ignoreMissingPath' => true]` as optiont of your query to target only records that have the path in their JSON field with a value set to `null`.
+
+
 There's some caveats with data types not natively supported by JSON format, like datetimes, but it can be handled by using [JSON data types](using-json-data-types).
 
 ### Using aggregation and functions
@@ -246,14 +250,14 @@ $e = $table->createEntity(['data->key' => 'foo', 'data->really.deep.key' => 'not
     'key' => 'foo',
     'really' => [
       'deep' => [
-        'key' => 'not annoying' // maybe yes if using arrays
+        'key' => 'not annoying' // maybe yes if having to type arrays
       ]
     ]
   ]
 ]
 ```
 
-When patching entities, the *default* behavior is to consider that the whole JSON structure is provided in data. Therefore, all previous data is lost and gone. To avoid this, you can either pass `jsonMerge` as `true` in `patchEntity` options or call `jsonMerge` on the resulting entity (if using `DatFieldTrait`) or through table :
+When patching entities, the *default* behavior is to consider that the **whole** JSON structure is provided in data. Therefore, all previous data is lost and gone. To avoid this, you can either pass `jsonMerge` as `true` in `patchEntity` options or call `jsonMerge` on the resulting entity (if using `DatFieldTrait`) or through table :
 
 ```php
 // Keep our previously created entity and patch it
@@ -267,7 +271,7 @@ $e = $table->patchEntity(['data->hacked' => true);
   ]
 ]
 
-// Damnit, let's restore and merge
+// Damnit, let's restore lost data
 $e->jsonMerge();
 // or
 $table->jsonMerge($e);
@@ -290,7 +294,7 @@ $table->jsonMerge($e);
 $e = $table->patchEntity(['data->hacked' => true, ['jsonMerge' => true]);
 ```
 
-You can fine tune which field should be merged by passing an array of the JSON fields name to `jsonMerge` option or method.
+You can fine tune which field **should be merged** by passing an array of the JSON fields name to `jsonMerge` option or method : `['data']` for instance.
 
 ### What brings `DatFieldTrait` within entities ?
 

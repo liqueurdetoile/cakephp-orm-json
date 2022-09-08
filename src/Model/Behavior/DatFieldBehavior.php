@@ -84,7 +84,7 @@ class DatFieldBehavior extends Behavior
         $copy = $data->getArrayCopy();
 
         // Enable merging for all fields if no option is given
-        $merging = $options['jsonMerge'] ?? ['*'];
+        $merging = $options['jsonMerge'] ?? false;
         $forMerging = [];
 
         if ($merging === true) {
@@ -107,8 +107,8 @@ class DatFieldBehavior extends Behavior
                 $fieldname = $this->getDatFieldPart('field', $field);
                 $this->setDatFieldValueInData($field, $value, $data);
                 $data->offsetUnset($field);
-                // Register field for later merging
-                if (in_array('*', (array)$merging) || in_array($fieldname, (array)$merging)) {
+                // Register field for later merging if enabled
+                if ($merging && in_array('*', (array)$merging) || in_array($fieldname, (array)$merging)) {
                     $forMerging[] = $fieldname;
                 }
             }
@@ -136,7 +136,7 @@ class DatFieldBehavior extends Behavior
             return;
         }
 
-        $this->jsonMerge($entity, $options->offsetGet('jsonMerge') ?? []);
+        $this->jsonMerge($entity, $options->offsetGet('jsonMerge'));
     }
 
     /**

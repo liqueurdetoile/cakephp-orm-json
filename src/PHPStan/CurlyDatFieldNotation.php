@@ -6,7 +6,6 @@ namespace Lqdt\OrmJson\PHPStan;
 use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 use Lqdt\OrmJson\DatField\Exception\UnparsableDatFieldException;
 use PHPStan\Reflection\ClassReflection;
-use PHPStan\Reflection\MissingPropertyFromReflectionException;
 use PHPStan\Reflection\PropertiesClassReflectionExtension;
 use PHPStan\Reflection\PropertyReflection;
 
@@ -26,9 +25,15 @@ class CurlyDatFieldNotation implements PropertiesClassReflectionExtension
         try {
             $field = $this->getDatFieldPart('field', $propertyName);
 
-            return $classReflection->hasProperty($field);
+            if (!$classReflection->hasProperty($field)) {
+                return false;
+            }
+
+            $property = $classReflection->getProperty($field, new \PHPStan\Analyser\OutOfClassScope());
+
+            return get_class($property->getReadableType()) === 'PHPStan\Type\ArrayType';
         } catch (UnparsableDatFieldException $err) {
-            return $classReflection->hasNativeProperty($propertyName);
+            return false;
         }
     }
 
@@ -42,17 +47,6 @@ class CurlyDatFieldNotation implements PropertiesClassReflectionExtension
      */
     public function getProperty(ClassReflection $classReflection, string $propertyName): PropertyReflection
     {
-        try {
-            $field = $this->getDatFieldPart('field', $propertyName);
-
-            if (!$classReflection->hasProperty($field)) {
-                    /** @phpstan-ignore-next-line */
-                    throw new MissingPropertyFromReflectionException($classReflection->getName(), $field);
-            }
-
-            return new DatFieldProperty($classReflection);
-        } catch (UnparsableDatFieldException $err) {
-            return $classReflection->getNativeProperty($propertyName);
-        }
+        return new DatFieldProperty($classReflection);
     }
 }

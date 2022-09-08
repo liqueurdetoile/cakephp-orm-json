@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
+use Cake\Database\Type;
 use Cake\Datasource\ConnectionManager;
 use CakephpTestSuiteLight\Sniffer\MysqlTriggerBasedTableSniffer;
-use Migrations\TestSuite\Migrator;
 
 /**
  * Test suite bootstrap for CakephpOrmJson plugin
@@ -31,8 +31,19 @@ ConnectionManager::setConfig('test', [
   'tableSniffer' => $sniffer,
 ]);
 
-define('COMPAT_MODE', false);
+define('COMPAT_MODE', true);
 
-// Run migrations
-$migrator = new Migrator();
-$migrator->run([], false);
+// Swap to immutable for types to avoid instanceof FrozenXX failure in tests
+Type::build('datetime')->useImmutable(); // @phpstan-ignore-line
+Type::build('date')->useImmutable(); // @phpstan-ignore-line
+Type::build('time')->useImmutable(); // @phpstan-ignore-line
+Type::build('timestamp')->useImmutable(); // @phpstan-ignore-line
+
+// Stub modern truncating trait
+require_once 'StubTruncateDirtyTables.php';
+
+// Enable compatibility mode
+\Lqdt\OrmJson\DatField\Compat3x::enable();
+
+// Migrate test database
+\CakephpTestMigrator\Migrator::migrate([], ['truncate' => false]); // @phpstan-ignore-line

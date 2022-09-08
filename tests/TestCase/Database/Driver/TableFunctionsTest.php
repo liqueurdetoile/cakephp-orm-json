@@ -50,7 +50,7 @@ class TableFunctionsTest extends TestCase
           ->static('attributes.item', 'test')
           ->generate(10);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
 
         $q = $this->Objects->find();
         $q->select(['count' => $q->func()->count('attributes->item')]);
@@ -66,7 +66,7 @@ class TableFunctionsTest extends TestCase
           ->faker('attributes.n', 'randomElement', [1, '1'])
           ->generate(10);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
 
         $q = $this->Objects->find();
         $q->select(['total' => $q->func()->sum('attributes->n')]);

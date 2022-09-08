@@ -57,7 +57,7 @@ class TableFilterTest extends TestCase
           ->generate(50);
 
         $objects = $this->Objects->newEntities($this->data);
-        $this->objects = $this->Objects->saveManyOrFail($objects);
+        $this->objects = $this->Objects->saveMany($objects);
     }
 
     /**

@@ -106,9 +106,9 @@ class BelongsToManyTest extends TestCase
           ->faker('attributes.client_id', 'randomElement', $clients)
           ->generate(200);
 
-        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
-        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
-        $this->Relations->saveManyOrFail($this->Relations->newEntities($this->relations), ['checkExisting' => false]);
+        $this->Agents->saveMany($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
+        $this->Clients->saveMany($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
+        $this->Relations->saveMany($this->Relations->newEntities($this->relations), ['checkExisting' => false]);
     }
 
     public function tearDown(): void
@@ -224,6 +224,8 @@ class BelongsToManyTest extends TestCase
 
     public function testSaveAssociated(): void
     {
+        $this->skipIf(COMPAT_MODE, 'Not working in CakePHP 3.x as it has been heavily refactored');
+
         $agent = [
           'attributes' => ['name' => 'Batman'],
           'followers' => [
@@ -274,6 +276,8 @@ class BelongsToManyTest extends TestCase
 
     public function testLinkReplaceLinksAndUnlink(): void
     {
+        $this->skipIf(COMPAT_MODE, 'Not working in CakePHP 3.x as it has been heavily refactored');
+
         $id = $this->agents[0]['id'];
         $agent = $this->Agents->get($id, ['contain' => ['Followers']]);
 

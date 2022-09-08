@@ -18,18 +18,19 @@ jobs:
       matrix:
         php-version: ['7.2', '7.4', '8.0', '8.1', '8.2']
         db-family: ['mysql']
-        db-version: ['mysql-5.7']
+        db-version: ['mysql-8']
         coverage: ['none']
         prefer-lowest: ['']
         include:
-          - php-version: '7.2'
-            db-family: 'mysql'
-            db-version: 'mysql-8'
-            prefer-lowest: 'prefer-lowest'
           - php-version: '7.4'
             db-family: 'mysql'
             db-version: 'mysql-8'
             coverage: 'pcov'
+          - php-version: '7.4'
+            db-family: 'mysql'
+            db-version: 'mysql-5.7'
+            coverage: 'none'
+            prefer-lowest: ['prefer-lowest']
           # - php-version: '7.4'
           #   db-family: 'mariadb'
           #   db-version: '10.2'
@@ -87,7 +88,7 @@ jobs:
     - name: Composer install
       run: |
         if ${{ matrix.prefer-lowest == 'prefer-lowest' }}; then
-          composer update --prefer-lowest --prefer-stable
+          composer enable-compat
         elif ${{ matrix.php-version == '8.2' }}; then
           composer update --ignore-platform-req=php
         else
@@ -99,7 +100,7 @@ jobs:
       run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
 
     - name: Run PHPUnit (No coverage)
-      if: matrix.coverage == 'none'
+      if: matrix.coverage == 'none' && matrix.prefer-lowest <> 'prefer-lowest'
       run: vendor/bin/phpunit
 
     - name: Run PHPUnit (With coverage)
@@ -111,10 +112,14 @@ jobs:
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Run PHPUnit (Legacy)
+      if: matrix.prefer-lowest == 'prefer-lowest'
+      run: vendor/bin/phpunit -c phpunit.compat.xml.dist
+
     - name: Run PHP CodeSniffer
-      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-5.7'}}
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
       run: vendor/bin/phpcs --report=checkstyle src/ tests/ | cs2pr
 
     - name: Run PHPstan
-      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-5.7'}}
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
       run: composer stan-github

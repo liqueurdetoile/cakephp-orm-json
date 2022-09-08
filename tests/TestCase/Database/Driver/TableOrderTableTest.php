@@ -54,7 +54,7 @@ class TableOrderTableTest extends TestCase
           ->generate(50);
 
         $objects = $this->Objects->newEntities($this->data);
-        $this->objects = $this->Objects->saveManyOrFail($objects);
+        $this->objects = $this->Objects->saveMany($objects);
     }
 
     /**
@@ -125,6 +125,7 @@ class TableOrderTableTest extends TestCase
 
     public function testOrderNastyJsonTyped(): void
     {
+        $this->skipIf(COMPAT_MODE, 'Closure in OrderAsc is not available before 3.9');
         $previous = null;
         $objects = $this->Objects
           ->find('all', [
