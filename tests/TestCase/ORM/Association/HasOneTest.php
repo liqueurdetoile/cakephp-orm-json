@@ -47,7 +47,7 @@ class HasOneTest extends TestCase
           ->faker('contact.attributes.mail', 'email')
           ->generate(20);
 
-        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
+        $this->Clients->saveMany($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
     }
 
     public function tearDown(): void

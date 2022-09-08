@@ -20,7 +20,7 @@ switch (env('DB_FAMILY')) {
         $sniffer = MysqlTriggerBasedTableSniffer::class;
         break;
     default:
-      // Fallback on local config. Should ne updated as needed
+        // Fallback on local config. Should be updated as needed
         $dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
         $sniffer = MysqlTriggerBasedTableSniffer::class;
 }
@@ -30,6 +30,8 @@ ConnectionManager::setConfig('test', [
   'url' => env('DB_URL', $dsn),
   'tableSniffer' => $sniffer,
 ]);
+
+define('COMPAT_MODE', false);
 
 // Run migrations
 $migrator = new Migrator();

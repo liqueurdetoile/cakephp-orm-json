@@ -3,41 +3,11 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\Test\TestCase\Database\Driver;
 
-use Cake\Database\Connection;
-use Cake\TestSuite\TestCase;
-
 /**
  * App\Model\Behavior\JsonBehavior Test Case
  */
 class QuoteIdentifiersTest extends TestCase
 {
-    /**
-     * Mocked connection
-     *
-     * @var \Cake\Database\Connection
-     */
-    public $connection;
-
-    public function setUp(): void
-    {
-        parent::setUp();
-
-        $driver = $this->getMockBuilder('Lqdt\OrmJson\Database\Driver\DatFieldMysql')
-          ->onlyMethods(['enabled'])
-          ->getMock();
-        $driver->expects($this->once())
-          ->method('enabled')
-          ->will($this->returnValue(true));
-        $this->connection = new Connection(['driver' => $driver]);
-    }
-
-    public function tearDown(): void
-    {
-        unset($this->connection);
-
-        parent::tearDown();
-    }
-
     public function quoteIdentifierData(): array
     {
         return [

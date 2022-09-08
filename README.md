@@ -1,11 +1,12 @@
 [![Latest Stable Version](https://img.shields.io/github/release/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 ![2.x-next status](https://github.com/liqueurdetoile/cakephp-orm-json/actions/workflows/ci.yml/badge.svg?branch=2.x-next)
 [![Coverage Status](https://coveralls.io/repos/github/liqueurdetoile/cakephp-orm-json/badge.svg?branch=master)](https://coveralls.io/github/liqueurdetoile/cakephp-orm-json?branch=master)
+![PR_Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 [![license](https://img.shields.io/github/license/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 
 # Cake-orm-json plugin
 
-**This branch is for CakePHP >=4.3.5. It supports PHP ^7.2|^8.0**
+**This branch is for CakePHP ^3.7|^4.0 and supports PHP ^7.2|^8.0**
 **For previous CakePHP versions, please use v1 of this plugin**
 
 This plugin extends usual CakePHP ORM operations with JSON fields. It embeds a special [datfield notation](#datfield-format) that allow to easily target a path into a JSON field data. With it, you can :
@@ -15,9 +16,45 @@ This plugin extends usual CakePHP ORM operations with JSON fields. It embeds a s
 - easily access, mutate and delete JSON data in entity : `$e->get('jfield->darn.deep.key')`
 - use JSON data as foreign keys for associations (quite extreme indeed and not really recommended but it can be useful at margin)
 
-**Relational databases are not primarily designed** to handle non-schemed data and using JSON data fields can issue really bad performances. Nevertheless the newest releases of engines have also show significant improvements in dealing with JSON data and raising of NoSQL has created different needs and constraints.
+**Relational databases are not primarily designed** to handle non-schemed data and using JSON data fields can issue really bad performances. Nevertheless the newest releases of engines have also shown significant improvements in dealing with JSON data and raising of NoSQL has created different needs and constraints.
 
-**Caution : As with version 2.0.0, it only works with Mysql databases >= 5.7.8. Setup is done to allow use of this plugin with other engines and I hope to release it at least for MariaDB, SQLite and PostgreSQL. Any help would be very appreciated though :smile**
+**Caution : As with version 2.0.0, it only works with Mysql databases >= 5.7.8. Setup is done to allow adding other engines to this plugin and I hope to release it at least for MariaDB and SQLite, maybe PostgreSQL. Any help would be very appreciated though :smile**
+
+<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+- [Cake-orm-json plugin](#cake-orm-json-plugin)
+	- [Installation](#installation)
+		- [Install plugin](#install-plugin)
+		- [Recommended setup](#recommended-setup)
+			- [Embeds `DatFieldAwareTrait` in models](#embeds-datfieldawaretrait-in-models)
+			- [Embeds `DatFieldBehavior` in models](#embeds-datfieldbehavior-in-models)
+			- [Enbeds `DatFieldTrait` with entities](#enbeds-datfieldtrait-with-entities)
+	- [Datfield format](#datfield-format)
+	- [Usage](#usage)
+		- [Quick guide](#quick-guide)
+		- [Selecting fields](#selecting-fields)
+		- [Filtering and ordering data](#filtering-and-ordering-data)
+		- [Using aggregation and functions](#using-aggregation-and-functions)
+		- [Marshaling data](#marshaling-data)
+		- [What brings `DatFieldTrait` within entities ?](#what-brings-datfieldtrait-within-entities-)
+			- [For PHPStan users](#for-phpstan-users)
+		- [Using JSON data types](#using-json-data-types)
+		- [Using JSON data types](#using-json-data-types)
+			- [Registering JSON data type permanently](#registering-json-data-type-permanently)
+			- [Registering JSON data types for a single query](#registering-json-data-types-for-a-single-query)
+		- [Linking models together](#linking-models-together)
+			- [Limitations with CakePHP 3.x](#limitations-with-cakephp-3x)
+	- [Advanced setup](#advanced-setup)
+			- [Use the upgraded driver for all models](#use-the-upgraded-driver-for-all-models)
+			- [Enable or disable upgraded driver per model](#enable-or-disable-upgraded-driver-per-model)
+			- [Use upgraded driver per query](#use-upgraded-driver-per-query)
+			- [Some tricky things to know](#some-tricky-things-to-know)
+		- [API reference](#api-reference)
+	- [Difference from v1.x](#difference-from-v1x)
+	- [Changelog](#changelog)
+	- [Disclaimer](#disclaimer)
+
+<!-- /TOC -->
 
 ## Installation
 
@@ -30,13 +67,19 @@ composer require liqueurdetoile/cakephp-orm-json
 
 The base namespace of the plugin is `Lqdt\OrmJson`.
 
-### Recommended setup
-This plugin is working by cloning the used connection in order to upgrade its driver and insert a translation step that will allow to parse datfield notation into a suitable form that can then be used by cakePHP ORM. Obviously, adding this layer if not using datfield notation is pretty useless.
+> **Important :** If you plan to use this plugin with Cakephp 3.x, you must enable compatibility mode by adding this line to your `config/bootstrap.php` in order to setup required classes alias from Cakephp 4.x :
 
-There's many ways to setup the plugin in order to optimize things but we recommend this way as it will fit most of use cases :
+```php
+\Lqdt\OrmJson\DatField\Compat3x::enable();
+```
+
+### Recommended setup
+This plugin is working by cloning the used connection in order to upgrade its driver and insert a translation step that will allow to parse datfield notation into a suitable form that can then be used by cakePHP ORM. Obviously, adding this layer if not using datfield notation is pretty useless though resource consuming.
+
+There's many ways to setup the plugin in order to optimize things but we recommend this one as it will fit most of use cases :
 - Add `DatFieldBehavior` that have JSON fields without upgrading table connection, and add `DatFieldTrait` to their corresponding entities;
 - Add `DatFieldAwareTrait` to models without JSON fields but which uses associations relying on datfield foreign keys;
-- Always call `find('datfields')` or `find('json')` when querying if using datfield notation to ensure that translation is enabled.
+- Always call `find('datfields')` or `find('json')` when querying if using datfield notation to ensure that translation is correctly enabled.
 
 Keep in my mind that you keep full control on using regular or upgraded connection. If you have some performance issues with this setup, please check [advanced setup](#advanced_setup) for more informations.
 
@@ -77,7 +120,7 @@ class UsersTable extends Table
 ```
 You can pass `['upgrade' => true]` as behavior config options to request an immediate connection upgrade for the model.
 
-The behavior can be used without the [entity trait](#use-datfieldtrait-with-entities) and vice-versa.
+The behavior can be used without `DatFieldTrait` in entities and vice-versa.
 
 #### Enbeds `DatFieldTrait` with entities
 Datfield trait brings up tools to access and manipulate with ease the content of JSON fields. Obviously, it's only useful with entities that contain JSON fieds.
@@ -94,18 +137,18 @@ class User extends Entity
 }
 ```
 
-The trait can be used without DatFieldAwareTrait or DatFieldBehavior in modelds and vice-versa.
+The trait can be used without `DatFieldAwareTrait` or `DatFieldBehavior` in models and vice-versa.
 
 ## Datfield format
-In order to work with inner JSON data, we need to know which field to use and which path to use in this field. You can, obviously use SQL fragments and/or native Mysql JSON functions but, believe me, it's very prone to error, needs securing user input, and, well, why using an ORM if we have to write raw SQL each time ?
+In order to work with inner JSON data, we need to know which field to use and which path to use in this field. You can, obviously use SQL fragments and/or native Mysql JSON functions but, believe me, it's very prone to error, needs securing user input, and, well, what about using an ORM if we have to write raw SQL each time ?
 
-This plugin leverage this difficulty by providing quickier syntax to target JSON data. In fact, this version brings up two ways and you can choose or mix which one will best suit your way.
-
-For instance, let's say you have a JSON field named `position`, exposing two keys `lat` and `lon` in a `Locations` model.
+This plugin solves this difficulty by providing quick syntax to target JSON data. In fact, this version brings up two ways and you can choose or mix which one will best suit your way.
 
 This plugin introduced the `datfield` format (contraction of `dot` and `at field`) whick looks like : <tt>path@[Model.]field</tt> and can be used in the same way regular fields are used. As usual, `Model` part is optional if no name conflict may occurs.
 
 Since v2, this plugin also supports a more *object* way which looks like : <tt>[Model.]field->path</tt>
+
+For instance, let's say you have a JSON field named `position`, exposing two keys `lat` and `lon` in a `Locations` model.
 
 For query operations or with special entity getters/setters, You may consider using `'lat@position'` or `'position->lat'` to easily manipulate and access the `lat` data in the `position` field.
 
@@ -116,12 +159,12 @@ It also partially supports JSON path with (as now) the [syntax used by Mysql](ht
 ## Usage
 
 ### Quick guide
-DatField notation can be used in any statements involving named fields :
+DatField notation can be used in any statements involving fields :
 
 ```php
 // Assuming $table has DatFieldBehavior attached and its entity has DatFieldTrait attached
 $customers = $table->find('json')
-  // You can mix v1 and v2 syntax as will
+  // You can mix v1 and v2 syntax at will
   ->select(['id', 'attributes', 'name' => 'attributes->id.person.name'])
   ->where(['attributes->id.person.age >' => 40])
   ->order(['attributes->id.person.age'])
@@ -136,20 +179,18 @@ foreach ($customers as $customer) {
     $stingy = $total < 50;
     $customer->set('attributes->status.stingy', $stingy);
     // You can also use array-like syntax
-    $customer->{'attributes->status.vip'} = $total > 500;
-    // You can also use curly syntax
+    $customer['attributes->status.vip'] = ($total > 500);
+    // or curly syntax
     $customer->{'attributes->status.tobeCalled'} = !$stingy;
 }
 
 $table->saveMany($customers);
 ```
 
-**In short** : just target and use JSON data as you would do it with regular fields throug datfield notation. If you know some troubles, feel free to open an issue as needed.
-
-Read further for more advanced usage.
+> **In short** : just target and use JSON data as you would do with regular fields by using datfield notation. If you know some troubles, feel free to open an issue as needed.
 
 ### Selecting fields
-You can easily select specific paths in your data among paths with a regular select statement. Without alias, it will creates a composite key from datfield `<field><underscore><path with dot replaced by underscore>` :
+You can easily select specific paths in your data among paths with a regular select statement. Without alias provided, it will create a composite key from datfield `<model if provided>_<field>_<path with dot replaced by underscore>` :
 
 ```php
 $e = $table->find()->select(['id', 'attributes->deep.nested.key'])->first();
@@ -175,10 +216,10 @@ $e = $table->find()->select(['id', 'key' => 'attributes->deep.nested.key'])->fir
 **/
 ```
 
-`enableAutoFields` will work very fine to expose some data while also loading all other fields :
+`enableAutoFields` will work fine to expose some data while loading all other fields :
 
 ```php
-$e = $table->find()->select('key' => 'attributes->deep.nested.key'])->enableAutoFields()->first();
+$e = $table->find()->select(['key' => 'attributes->deep.nested.key'])->enableAutoFields()->first();
 
 /** Entity data will look like
 * [
@@ -196,7 +237,7 @@ $e = $table->find()->select('key' => 'attributes->deep.nested.key'])->enableAuto
 ```
 
 ### Filtering and ordering data
-Filtering or ordering with datfields can be done like on any other fields and by any usual means of the ORM. Expressions will be automatically translated to usable ones in SQL. You can use datfields at any place (no really).
+Filtering or ordering with datfields can be done like with any other fields and by any usual means of the ORM. Expressions will be automatically translated to usable ones in SQL. You can use datfields at any place.
 
 ```php
 // Simple search using v2 datfield notation
@@ -204,7 +245,7 @@ $data = $table->find()->where(['attributes->key' => 'key'])->first();
 $data = $table->find()->where(['attributes->really.deep.number >=' => 10])->first();
 $data = $table->find()->where(['attributes->key LIKE' => '%key%', 'attributes->really.deep.nested.key' => 'deep.nested.key'])->first();
 
-// Looking for null will return all fields where key is missing or equals to null
+// Looking for null will return all fields where key is missing or equals to null as default behavior
 $data = $table->find()->where(['attributes->fool IS' => null])->first();
 
 // Query builder is also fine
@@ -215,7 +256,11 @@ $data = $table
    })
    ->first();
 ```
-There's some caveats with data types not natively supported by JSON format, like datetimes, but it can be handled by using [JSON data types](using-json-data-types).
+
+> **Note :** When filtering on null values, default behavior is to consider that any record that don't have the target path in its JSON field also fulfills `IS NULL` condition. To avoid this, you can pass `['ignoreMissingPath' => true]` as query option to target only records that have the path in their JSON field with a value set to `null`.
+
+
+There's some caveats with data types not natively supported by JSON format, like datetime, but it can be handled by using [JSON data types](using-json-data-types).
 
 ### Using aggregation and functions
 Datfield are also fully supported and can be used as any regular fields.
@@ -224,10 +269,10 @@ Datfield are also fully supported and can be used as any regular fields.
 $q = $this->table->find();
 $res = $q
   ->select(['kind' => 'data->group', 'total' => 'data->i + data->j', 'count' => $q->func()->count('*')])
-	->group('kind')
-	->having(['total >' => 10])
+  ->group('kind')
+  ->having(['total >' => 10])
   ->distinct()
-	->all();
+  ->all();
 ```
 
 ### Marshaling data
@@ -237,7 +282,10 @@ $res = $q
 In some cases, you may want to use datfield notation in data provided to `createEntity` or `patchEntity` methods and there's no trouble in doing so :
 
 ```php
-$e = $table->createEntity(['data->key' => 'foo', 'data->really.deep.key' => 'not annoying']);
+$e = $table->createEntity([
+  'data->key' => 'foo',
+  'data->really.deep.key' => 'not annoying'
+]);
 
 // $e will looks like
 [
@@ -246,14 +294,14 @@ $e = $table->createEntity(['data->key' => 'foo', 'data->really.deep.key' => 'not
     'key' => 'foo',
     'really' => [
       'deep' => [
-        'key' => 'not annoying' // maybe yes if using arrays
+        'key' => 'not annoying' // maybe yes if having to type array
       ]
     ]
   ]
 ]
 ```
 
-When patching entities, the *default* behavior is to consider that the whole JSON structure is provided in data. Therefore, all previous data is lost and gone. To avoid this, you can either pass `jsonMerge` as `true` in `patchEntity` options or call `jsonMerge` on the resulting entity (if using `DatFieldTrait`) or through table :
+When patching entities, the *default* behavior is to consider that the **whole** JSON structure is provided in data. Therefore, all previous data is lost and gone. To avoid this, you can either pass `jsonMerge` as `true` in `patchEntity` options or call `jsonMerge` on the resulting entity (if using `DatFieldTrait`) or through table :
 
 ```php
 // Keep our previously created entity and patch it
@@ -267,7 +315,7 @@ $e = $table->patchEntity(['data->hacked' => true);
   ]
 ]
 
-// Damnit, let's restore and merge
+// Damnit, let's restore lost data
 $e->jsonMerge();
 // or
 $table->jsonMerge($e);
@@ -286,17 +334,17 @@ $table->jsonMerge($e);
   ]
 ]
 
-// Next time, just add option
+// Next time, use option
 $e = $table->patchEntity(['data->hacked' => true, ['jsonMerge' => true]);
 ```
 
-You can fine tune which field should be merged by passing an array of the JSON fields name to `jsonMerge` option or method.
+> You can fine tune which field(s) should be merged by passing an array of the JSON fields name to `jsonMerge` option or method : `['data']` for instance.
 
 ### What brings `DatFieldTrait` within entities ?
 
 **Note :** Using this trait does not require to upgrade connection nor adding `DatFieldAwareTrait` or `DatFieldBehavior` to model.
 
-All regular methods are replaced when an entity used this trait to support datfield notation. Their behavior remains the same and they can obviously still be used for any regular field(s).
+All regular methods are replaced when an entity uses this trait to support datfield notation. Their behavior remains the same and they still can be used for any regular field.
 
 To get/set data with datfield, simply use `get` or `set`, array-like syntax or [curly syntax]((https://www.php.net/manual/en/language.types.string.php#language.types.string.parsing.complex)) :
 
@@ -309,7 +357,7 @@ $e->{'attributes->deep.nested.value'};
 $e->{'deep.nested.value@attributes'};
 ```
 
-[Dirty state](https://book.cakephp.org/4/en/orm/entities.html#checking-if-an-entity-has-been-modified) is available at property level and field level :
+[Dirty state](https://book.cakephp.org/4/en/orm/entities.html#checking-if-an-entity-has-been-modified) is available at path level and field level :
 
 ```php
 $e->set('attributes->deep.nested.value', 'foo');
@@ -319,7 +367,19 @@ $e->isDirty('attributes'); // true
 $e->isDirty(); // true
 ```
 
-**Note :** If you call `setDirty('attributes', false)`, all currently dirty paths in`attributes` will cleared as well.
+> **Note :** If you call `setDirty('attributes', false)`, all currently dirty paths in`attributes` will be cleared as well.
+
+#### For PHPStan users
+
+If you're using PHPStan and curly syntax to access your data, you will obviously have errors about accessing undefined properties on entities. To cope with these, this plugin provides a service to check if owning field exists in entity class and if it is typed as an array. To enable the service, simply add this snippet in your `phpstan.neon.dist` or whatsoever configuration file :
+
+```
+services:
+  -
+    class:  Lqdt\OrmJson\PHPStan\CurlyDatFieldNotation
+    tags:
+      - phpstan.broker.propertiesClassReflectionExtension
+```
 
 ### Using JSON data types
 
@@ -327,7 +387,7 @@ There's some caveats when dealing with data types inside JSON. By itself JSON ty
 
 Usually, datetime/time/date/timestamp fields are mapped to a `FrozenTime` object in cakePHP and a [registered type](https://book.cakephp.org/4/en/orm/database-basics.html#datetime-type) takes care of handling needed castings. Most of the time, this type is inferred from reflected schema and it's working out of the box.
 
-If a datetime is nested in some JSON data, it can't work like this as it is merely a string. When dealing with some usual string representations of datetimes, like Mysql one, ISO8601 or timestamps, it can be absolutely fine to simply do nothing as ordering will still work.
+If a datetime is nested in some JSON data, it can't work like this as it is merely a string. When dealing with some usual string representations of datetimes, like Mysql one, ISO8601 or timestamps, it can be absolutely fine to simply do nothing as ordering will work. You only have to take care to pass the right string format when saving data.
 
 Nevertheless, you miss all the convenience that brings datetime data type for manipulating values. Moreover, if you have some nasty formats, queries may lead to wrong results. Due to JSON versatility, many APIs make use of custom string formats and it can be tricky to handle them.
 
@@ -335,9 +395,9 @@ To ease troubleshooting these things, `DatFieldBehavior`allow to define JSON dat
 
 ### Using JSON data types
 
-**Note :** Connection **must** be upgraded in order to support JSON data type.
+> **Note :** Connection **must** be upgraded in order to support JSON data types.
 
-JSON data types are stored within and upgraded schema alongside regular fields. Therefore you will get errors if not upgrading connection before setting them up.
+JSON data types are stored within an upgraded schema alongside regular fields that is created when upgrading connection. Therefore you will get errors if upgrade is not done *before* setting them up.
 
 When registering JSON data type, you can either only provide a regular data type as string or an extended one to register callbacks for one or more of casting operations between :
 - `marshal`: Callback will be called when marshaling data.
@@ -345,7 +405,7 @@ When registering JSON data type, you can either only provide a regular data type
 - `toDatabase`: Callback will be called when persisting data
 
 
-All callbacks will receive the target value as first argument, the whole data as second argument and the query (if available in operation) as third argument.
+> All callbacks will receive the target value as first argument, the whole row data as second argument and the query (if available in operation) as third argument.
 
 If a callback is provided for a given operation (`marshal`, `toPHP` or `toDatabase`) alongside a regular data type, only callback will be applied to data. This way, you can override given data type operations instead of creating a new one.
 
@@ -353,6 +413,9 @@ If a callback is provided for a given operation (`marshal`, `toPHP` or `toDataba
 When using `DatfieldBehavior`, you can easily and permanently register JSON types that will persist through each queries. :
 
 ```php
+// Upgrade connection if not already done
+$table->useDatFields();
+
 // Register a single datfield as datetime type
 $table->getSchema()->setJsonTypes('data->time', 'datetime');
 
@@ -390,10 +453,13 @@ Please note that all JSON data types will be lost if connection is downgraded as
 You can also register JSON data type per query by providing a `jsonTypeMap` option. In case of conflict, it overrides any JSON data type stored in the model.
 
 ```php
-$q = $table->find('all', ['jsonTypeMap' => ['data->time' => 'datetime']])->all();
+// Upgrade connection if not already done
+$table->useDatFields();
+
+$q = $table->find('json', ['jsonTypeMap' => ['data->time' => 'datetime']])->all();
 ```
 
-You can as well provides callback by using full syntax.
+You can as well provide callbacks by using full syntax.
 
 ### Linking models together
 **Special upgraded associations are available both in `DatFieldAwareTrait` and `DatFieldBehavior`**
@@ -406,17 +472,26 @@ In order to use datfield as foreign key, simply use datfield counterpart of any 
 $Clients->datFieldHasOne('Agents', ['foreignKey' => 'data->agent_id']);
 $Clients->datFieldBelongsToMany('Products', [
   'foreignKey' => 'data->client_id'
-  'targetForeignKey' => 'data->product_id'
+  'targetForeignKey' => 'data->product_id',
+  'through' => 'Orders'
 ]);
 ```
 
-The full list :
+All others options and functionnalities remains the same.
+
+The counterparts list :
+
 - `belongsTo` <=> `datFieldBelongsToMany`
 - `hasOne` <=> `datFieldHasOne`
+- `hasMany` <=> `datFieldHasMany`
 - `belongsToMany` <=> `datFieldBelongsToMany`
-- `belongsToManyThrough` <=> `datFieldBelongsToManyThrough`
 
-**Note :** In MySQL, you can also use [virtual columns](https://vladmihalcea.com/index-json-columns-mysql/) to index JSON data.
+**Note :** No need to say that connection must be upgraded for these queries to work.
+
+> In MySQL, you may use [virtual columns](https://vladmihalcea.com/index-json-columns-mysql/) to index JSON data as a more efficient solution.
+
+#### Limitations with CakePHP 3.x
+The only limitation is that you cannot use `link`, `unlink` or save associated data when models are joined by `datFieldBelongsToMany` or `datFieldBelongsToManyThrough`. This is due to an heavy refactoring of how it is handled by CakePHP since version 4 release and there's now way to handle both with this plugin.
 
 ## Advanced setup
 This plugin contains :
@@ -526,12 +601,9 @@ From version 2.0.0, translation is done at MySQL driver level. The behavior now 
 
 CakePHP makers are great guys because they meant to plan many overrides that makes this plugin feasible.
 
-Version 2.x is a quite a breaking change from 1.x as JsonQuery is not needed and available anymore. Similarly, you don't need any `jsonXXX` methods on entities. Regular mutators, accessors and magic properties will work well with datfields.
+Version 2.x is a quite a breaking change from 1.x as JsonQuery is nor needed nor available anymore. Similarly, you don't need any `jsonXXX` methods on entities. Regular mutators, accessors and magic properties will work well with datfields.
 
-**Migrating is quite simple though**, simply stick to regular query statements and use `find`, `select`, `order`, `where` instead of previous ones `jsonQuery`, `jsonSelect`, `jsonOrder`, `jsonWhere`. In entities, use regular accessors and mutators to cope with data in JSON.
-
-## What's next ?
-It would be great to extends support to other SQL engines. I'm also
+**Migrating is quite simple though**, simply stick to regular query statements and use `select`, `order`, `where` instead of previous ones `jsonSelect`, `jsonOrder`, `jsonWhere`. In entities, use regular accessors and mutators to cope with data in JSON.
 
 ## Changelog
 **v2.0.0**

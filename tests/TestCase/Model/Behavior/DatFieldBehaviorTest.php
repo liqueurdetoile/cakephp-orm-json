@@ -98,7 +98,7 @@ class DatFieldBehaviorTest extends TestCase
     }
 
     /**
-     * When patching, default behavior is to merge json data
+     * When patching, default behavior is to replace json data
      */
     public function testMarshalWithPatchEntityDefaultBehavior(): void
     {
@@ -112,12 +112,12 @@ class DatFieldBehaviorTest extends TestCase
 
         $this->assertTrue($e->attributes['test']);
         $this->assertTrue($e->at2['test']);
-        $this->assertTrue($e->get('deep.keep@attributes'));
-        $this->assertTrue($e->get('deep.keep@at2'));
+        $this->assertNull($e->get('deep.keep@attributes'));
+        $this->assertNull($e->get('deep.keep@at2'));
     }
 
     /**
-     * Merging can be disabled permanently on table for all fields
+     * Merging can be enabled through query
      */
     public function testMarshalWithPatchEntityUpdatedBehavior(): void
     {
@@ -127,16 +127,21 @@ class DatFieldBehaviorTest extends TestCase
         ]));
 
         $this->assertTrue($e->get('deep.keep@attributes'));
-        $this->Objects->patchEntity($e, ['test@attributes' => true, 'test@at2' => true], ['jsonMerge' => false]);
+        $this->Objects->patchEntity($e, ['test@attributes' => true, 'test@at2' => true], ['jsonMerge' => true]);
+        // Aftermarshal event is not available until CakePHP 4. Needs to use old school way
+        /** @phpstan-ignore-next-line */
+        if (COMPAT_MODE) {
+            $e->jsonMerge();
+        }
 
         $this->assertTrue($e->attributes['test']);
         $this->assertTrue($e->at2['test']);
-        $this->assertEmpty($e->get('deep.keep@attributes'));
-        $this->assertEmpty($e->get('deep.keep@at2'));
+        $this->assertTrue($e->get('deep.keep@attributes'));
+        $this->assertTrue($e->get('deep.keep@at2'));
     }
 
     /**
-     * Merging can be disabled permanently on table for a targetted field
+     * Merging can be enabled for a targetted field
      */
     public function testMarshalWithPatchEntityUpdatedTargettedBehavior(): void
     {
@@ -147,11 +152,16 @@ class DatFieldBehaviorTest extends TestCase
 
         $this->assertTrue($e->get('deep.keep@attributes'));
         $this->Objects->patchEntity($e, ['test@attributes' => true, 'test@at2' => true], ['jsonMerge' => ['attributes']]);
+        // Aftermarshal event is not available until CakePHP 4. Needs to use old school way
+        /** @phpstan-ignore-next-line */
+        if (COMPAT_MODE) {
+            $e->jsonMerge('attributes');
+        }
 
         $this->assertTrue($e->attributes['test']);
         $this->assertTrue($e->at2['test']);
         $this->assertTrue($e->get('deep.keep@attributes'));
-        $this->assertEmpty($e->get('deep.keep@at2'));
+        $this->assertNull($e->get('deep.keep@at2'));
     }
 
     public function testJsonTypeMap(): void

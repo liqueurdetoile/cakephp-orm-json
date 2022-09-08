@@ -51,7 +51,7 @@ class TableAggregationsTest extends TestCase
           ->faker('attributes.string', 'randomElement', ['foo', 'bar', 'baz'])
           ->generate(50);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
         $data = (new Collection($data))->countBy('attributes.string')->toArray();
 
         $q = $this->Objects->find();
@@ -73,7 +73,7 @@ class TableAggregationsTest extends TestCase
           ->faker('attributes.string', 'randomElement', ['foo', 'bar', 'baz'])
           ->generate(50);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
 
         $q = $this->Objects->find();
 
@@ -97,7 +97,7 @@ class TableAggregationsTest extends TestCase
           ->faker('attributes.date', 'randomElement', ['2020-01-01', '2021-01-01', '2022-01-01'])
           ->generate(50);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
         $data = (new Collection($data))->countBy('attributes.date')->toArray();
 
         $q = $this->Objects->find('all', ['jsonTypeMap' => ['attributes->date' => 'date']]);
@@ -121,7 +121,7 @@ class TableAggregationsTest extends TestCase
           ->faker('attributes.j', 'randomElement', [0,1,2])
           ->generate(50);
 
-        $this->Objects->saveManyOrFail($this->Objects->newEntities($data));
+        $this->Objects->saveMany($this->Objects->newEntities($data));
 
         $q = $this->Objects->find();
 

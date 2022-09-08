@@ -67,8 +67,8 @@ class HasManyTest extends TestCase
           ->faker('attributes.level', 'randomElement', [0,1,2,3,4,5])
           ->generate(20);
 
-        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents));
-        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients));
+        $this->Agents->saveMany($this->Agents->newEntities($this->agents));
+        $this->Clients->saveMany($this->Clients->newEntities($this->clients));
     }
 
     public function tearDown(): void

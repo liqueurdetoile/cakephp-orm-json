@@ -42,7 +42,7 @@ trait DatFieldSqlDialectTrait
     /**
      * @inheritDoc
      */
-    public function quoteIdentifier(string $identifier): string
+    public function quoteIdentifier($identifier): string
     {
         $identifier = trim($identifier);
 
@@ -74,7 +74,7 @@ trait DatFieldSqlDialectTrait
     /**
      * @inheritDoc
      */
-    public function queryTranslator(string $type): \Closure
+    public function queryTranslator($type): \Closure
     {
         // We must preprocess translation in order to let other translations be done with translated datfield
         return function (Query $query) use ($type) {
@@ -97,7 +97,7 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
-                debug($err);
+                // debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 
@@ -110,12 +110,7 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Applies translator to any expression or SQL snippets
-     *
-     * @param string|array|\Cake\Database\ExpressionInterface $expression Literal or object expression
-     * @param \Cake\Database\Query $query       Query
-     * @param \Lqdt\OrmJson\Database\JsonTypeMap $jsonTypes JSON types definition
-     * @return string|array|\Cake\Database\ExpressionInterface Updated expression
+     * @inheritDoc
      */
     public function translateExpression($expression, Query $query, JsonTypeMap $jsonTypes)
     {
@@ -206,17 +201,33 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Processes casters queue and applies it to row
+     * Processes casters queue and applies it to a whole row
+     * For SELECT statements, the selectmap must be provided in order to
+     * parse correctly selected fields from JSON field
      *
      * @param  array $row                   Row data
      * @param  array $casters               Casters queue
      * @param \Cake\Database\Query $query   Query
+     * @param \Lqdt\OrmJson\Database\JsonTypeMap|null $selectmap JSON type map for selected fields. Do not use if not in SELECT statement
      * @return array
      */
-    protected function _castRow(array $row, array $casters, Query $query): array
+    protected function _castRow(array $row, array $casters, Query $query, ?JsonTypeMap $selectmap = null): array
     {
+        $decoder = function ($value) {
+            return json_decode($value, true);
+        };
+
         foreach ($casters as $datfield => $caster) {
             try {
+                if ($selectmap) {
+                    // Check select type map for automapped aliased field that's need to be decoded before sent to type callback
+                    $type = $selectmap->type($datfield);
+                    if ($type && $type !== '__auto_json__' && !$this->isDatField($datfield)) {
+                        /** @var array $row */
+                        $row = $this->applyCallbackToData($datfield, $row, $decoder);
+                    }
+                }
+
                 /** @var array $row */
                 $row = $this->applyCallbackToData($datfield, $row, $caster, $row, $query);
             } catch (MissingPathInDataDatFieldException $err) {
@@ -242,21 +253,23 @@ trait DatFieldSqlDialectTrait
             $value = $caster($value);
         }
 
+        // Null case
         if (is_null($value)) {
-            $value = $query->func()->cast('null', 'JSON');
+            $value = $query->newExpr("CAST('null' AS JSON)");
         }
 
         // Boolean case, simply update value to its stringified JSON counterpart
         if (is_bool($value)) {
-            $value = $query->func()->cast($value ? 'true' : 'false', 'JSON');
+            $value = $value ? 'true' : 'false';
+            $value = $query->newExpr("CAST({$value} AS JSON)");
         }
 
         // Number case, we must cast value to JSON to avoid unexpected results with numeric strings
         if (is_integer($value) || is_float($value)) {
-            /** @phpstan-ignore-next-line */
-            $value = $query->func()->cast($value, 'JSON');
+            $value = $query->newExpr("CAST({$value} AS JSON)");
         }
 
+        // String or array/object case
         if (is_string($value) || is_array($value)) {
             $value = json_encode($value);
             $value = $query->newExpr("CAST('{$value}' AS JSON)");
@@ -287,9 +300,9 @@ trait DatFieldSqlDialectTrait
 
                 // Translate group clause
                 if ($clause === 'group' && !empty($part)) {
-                    $query = $query->group(array_map(function ($field) use ($map) {
+                    $query = $query->group(array_map(function ($field) {
                         /** @phpstan-ignore-next-line */
-                        return (string)$this->translateDatField($field, (bool)$map->type($field));
+                        return (string)$this->translateDatField($field);
                     }, $part), true);
                 }
 
@@ -314,8 +327,8 @@ trait DatFieldSqlDialectTrait
         // Registers JSON types to be applied to incoming data
         $casters = $selectmap->getCasters($query, 'toPHP') + $map->getCasters($query, 'toPHP');
         if (!empty($casters)) {
-            $query->decorateResults(function ($row) use ($casters, $query) {
-                $row = $this->_castRow($row, $casters, $query);
+            $query->decorateResults(function ($row) use ($casters, $query, $selectmap) {
+                $row = $this->_castRow($row, $casters, $query, $selectmap);
 
                 return $row;
             });
@@ -459,7 +472,9 @@ trait DatFieldSqlDialectTrait
         // Checks if it's a datfield and transform value if needed
         if ($this->isDatField($field)) {
             $caster = $jsonTypes->getCaster($field, $query);
-            $field = $this->translateDatField($field);
+            // Disable alias for update and delete queries
+            $repository = in_array($query->type(), ['update', 'delete']) ? false : null;
+            $field = $this->translateDatField($field, false, $repository);
             $value = $expression->getValue();
             $operator = strtolower($expression->getOperator());
             if ($operator === 'in' && is_array($value)) {
@@ -478,7 +493,8 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Translates an IdentifierExpression
+     * Translates an IdentifierExpression. Identifier is always unquoted as it can be used
+     * in complex OrderClauseExpression. Resulting DatFieldExpression is converted to string.
      *
      * @param \Cake\Database\Expression\IdentifierExpression $expression Expression
      * @param \Cake\Database\Query $query If `true returns indentifier instead of updated expression
@@ -516,8 +532,11 @@ trait DatFieldSqlDialectTrait
     ): QueryExpression {
         /** @phpstan-ignore-next-line */
         $datfield = (string)$this->translateDatField($datfield);
+        $ignoreMissingPath = $this->_getQueryOptions($query, 'ignoreMissingPath', false);
 
-        return $query->newExpr()->or([
+        return $ignoreMissingPath ?
+          $query->newExpr("{$datfield} = CAST('null' AS JSON)") :
+          $query->newExpr()->or([
             "{$datfield} IS" => null,
             $query->newExpr("{$datfield} = CAST('null' AS JSON)"),
         ]);
@@ -668,8 +687,7 @@ trait DatFieldSqlDialectTrait
 
             // Update alias target
             $map->setAlias($palias ?? $field, $alias);
-            // Translate field. It will be unquoted if a specific data type is provided
-            $updatedFields[$alias] = $this->translateDatField($field, $map->type($alias) !== 'json');
+            $updatedFields[$alias] = $this->translateDatField($field);
         }
 
         $query->select($updatedFields, true);

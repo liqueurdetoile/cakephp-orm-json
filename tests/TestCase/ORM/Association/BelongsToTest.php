@@ -66,8 +66,8 @@ class BelongsToTest extends TestCase
           ->faker('attributes.name', 'name')
           ->generate(20);
 
-        $this->Agents->saveManyOrFail($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
-        $this->Clients->saveManyOrFail($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
+        $this->Agents->saveMany($this->Agents->newEntities($this->agents), ['checkExisting' => false]);
+        $this->Clients->saveMany($this->Clients->newEntities($this->clients), ['checkExisting' => false]);
     }
 
     public function tearDown(): void

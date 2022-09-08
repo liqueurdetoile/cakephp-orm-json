@@ -153,7 +153,7 @@ class JsonTypeMap
     public function setAlias($datfield, string $alias): void
     {
         // Try to find out types in current registered datfields
-        $type = $this->type($datfield) ?? 'json';
+        $type = $this->type($datfield) ?? '__auto_json__';
 
         $this->_jsonTypeMap[$alias] = $type;
     }
@@ -222,6 +222,10 @@ class JsonTypeMap
      */
     protected function _getCasterByType($type, ?Query $query, string $operation = 'toDatabase'): callable
     {
+        if ($type === '__auto_json__') {
+            $type = 'json';
+        }
+
         if (is_array($type)) {
             if (array_key_exists($operation, $type) && is_callable($type[$operation])) {
                 $type = $type[$operation];

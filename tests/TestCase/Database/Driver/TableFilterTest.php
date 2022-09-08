@@ -57,7 +57,7 @@ class TableFilterTest extends TestCase
           ->generate(50);
 
         $objects = $this->Objects->newEntities($this->data);
-        $this->objects = $this->Objects->saveManyOrFail($objects);
+        $this->objects = $this->Objects->saveMany($objects);
     }
 
     /**
@@ -79,6 +79,12 @@ class TableFilterTest extends TestCase
         $this->assertEquals(50, $q->count());
 
         $q = $this->Objects->find()->where(['attributes->missing IS NOT' => null]);
+        $this->assertEquals(0, $q->count());
+
+        // Ignore missing key option
+        $q = $this->Objects
+          ->find('all', ['ignoreMissingPath' => true])
+          ->where(['attributes->missing IS' => null]);
         $this->assertEquals(0, $q->count());
     }
 

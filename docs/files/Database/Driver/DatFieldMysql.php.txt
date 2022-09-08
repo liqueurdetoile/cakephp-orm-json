@@ -1,102 +1,109 @@
 <?php
+declare(strict_types=1);
+
 namespace Lqdt\OrmJson\Database\Driver;
 
 use Cake\Database\Driver\Mysql;
-use Cake\Database\Expression\Comparison;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlJoinTrait;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlOrderTrait;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlSelectTrait;
-use Lqdt\OrmJson\Database\Dialect\DatFieldMysqlWhereTrait;
+use Cake\Database\Expression\ComparisonExpression;
+use Cake\Database\Expression\FunctionExpression;
+use Cake\Database\ExpressionInterface;
+use Cake\Database\Query;
+use Lqdt\OrmJson\Database\DatFieldDriverInterface;
+use Lqdt\OrmJson\Database\Expression\DatFieldExpression;
+use Lqdt\OrmJson\Database\JsonTypeMap;
+use Lqdt\OrmJson\DatField\Exception\UnparsableDatFieldException;
 
-class DatFieldMysql extends Mysql
+class DatFieldMysql extends Mysql implements DatFieldDriverInterface
 {
-    use DatFieldMysqlJoinTrait;
-    use DatFieldMysqlOrderTrait;
-    use DatFieldMysqlSelectTrait;
-    use DatFieldMysqlWhereTrait;
+    use DatFieldSqlDialectTrait;
 
-    public function queryTranslator($type)
+    /**
+     * @inheritDoc
+     */
+    public function translateDatField($datfield, bool $unquote = false, $repository = null)
     {
-        return function ($query) use ($type) {
-            $repository = $query->getRepository();
-
-            if ($repository->hasBehavior('DatField') || $repository->hasBehavior('Lqdt\OrmJson\Model\Behavior\DatFieldBehavior')) {
-                // Process order
-                $order = $query->clause('order');
-                if (!empty($order)) {
-                    $this->_orderedFieldsConverter($order, $query);
-                }
-
-                // Process select
-                $select = $query->clause('select');
-                if (!empty($select)) {
-                    $query->select($this->_selectedFieldsConverter($select, $query), true);
-                }
-
-                // Process joins
-                $joints = $query->clause('join');
-                if (!empty($joints)) {
-                    $this->_joinedFieldsConverter($joints, $query);
-                }
-
-                // Process filters
-                $where = $query->clause('where');
-                if (!empty($where)) {
-                    $query->where($this->_filtersConverter($where, $query), [], true);
-                }
+        try {
+            if (is_array($datfield)) {
+                return array_map(function ($field) use ($unquote, $repository) {
+                    return $this->translateDatField($field, $unquote, $repository);
+                }, $datfield);
             }
 
-            // Apply parent driver translator transformations
-            $parentTranslator = parent::queryTranslator($type);
-            $query = $parentTranslator($query);
+            if ($datfield instanceof DatFieldExpression) {
+                return $datfield;
+            }
 
-            return $query;
-        };
-    }
+            if ($datfield instanceof ExpressionInterface) {
+                return $datfield;
+            }
 
-    public function prepare($query)
-    {
-        if ($query instanceof \Cake\ORM\Query) {
-            // debug($query->sql());
+            ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield, $repository);
+
+            $expr = new FunctionExpression('JSON_EXTRACT', [$doc => 'identifier', $path => 'literal']);
+
+            $expr = $unquote ? new FunctionExpression('JSON_UNQUOTE', [$expr]) : $expr;
+            $expr = new DatFieldExpression([$expr]);
+
+            return $expr->setDatField($datfield);
+        } catch (UnparsableDatFieldException $err) {
+            return $datfield;
         }
-        return parent::prepare($query);
     }
 
     /**
-     * We need to override this method from SqlDialectTrait as it breaks apart datfields with delete
      * @inheritDoc
      */
-    protected function _removeAliasesFromConditions($query)
+    public function translateSetDatField(
+        ComparisonExpression $expr,
+        Query $query,
+        JsonTypeMap $map
+    ): ComparisonExpression {
+        $datfield = $expr->getField();
+
+        if (!is_string($datfield)) {
+            return $expr;
+        }
+
+        if (!$this->isDatField($datfield)) {
+            // We still need to apply JSON types if field is a JSON field
+            $casters = $map->getCasters($query);
+            $row = [$datfield => $expr->getValue()];
+            $row = $this->_castRow($row, $casters, $query);
+            $expr->setValue($row[$datfield]);
+
+            return $expr;
+        }
+
+        $field = $this->getDatFieldPart('field', $datfield);
+        ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield);
+        $caster = $map->getCaster($datfield, $query);
+        $value = $this->_castValue($expr->getValue(), $query, $caster);
+        $expr->setField($field);
+        $expr->setValue(new FunctionExpression('JSON_SET', [$doc => 'identifier', $path => 'literal', $value]));
+
+        return $expr;
+    }
+
+    /**
+     * Utility function to parse needed parts for JSON_EXTRACT or JSON_SET functions
+     *
+     * @param  string $datfield Datfield
+     * @param  string|null|false $repository Repository. IF set to false, existing model will be removed
+     * @return array            Parts as doc and path
+     */
+    protected function _extractJsonParts(string $datfield, $repository = null): array
     {
-        if ($query->clause('join')) {
-            throw new \RuntimeException(
-                'Aliases are being removed from conditions for UPDATE/DELETE queries, ' .
-                'this can break references to joined tables.'
-            );
-        }
+        ['model' => $model, 'field' => $field, 'path' => $path] =
+          $this->parseDatField($datfield, $repository ? $repository : null);
+        $field = $repository !== false && $model ? implode('.', [$model, $field]) : $field;
+        // Avoid adding a starting dot in path if querying an array or using joker
+        $path = in_array($path[0], ['[', '*']) ? '$' . $path : implode('.', ['$', $path]);
+        $path = "'" . $path . "'";
 
-        $conditions = $query->clause('where');
-        if ($conditions) {
-            $conditions->traverse(function ($condition) {
-                if (!($condition instanceof Comparison)) {
-                    return $condition;
-                }
-
-                $field = $condition->getField();
-                if ($field instanceof ExpressionInterface || strpos($field, '.') === false) {
-                    return $condition;
-                }
-
-                $parts = explode('.', $field);
-                array_shift($parts);
-                // list(, $field) = explode('.', $field);
-                $condition->setField(implode('.', $parts));
-
-                return $condition;
-            });
-        }
-
-        return $query;
+        return [
+          'doc' => $field,
+          'path' => $path,
+        ];
     }
 }
 

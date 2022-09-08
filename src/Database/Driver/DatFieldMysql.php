@@ -20,7 +20,7 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
     /**
      * @inheritDoc
      */
-    public function translateDatField($datfield, bool $unquote = false, ?string $repository = null)
+    public function translateDatField($datfield, bool $unquote = false, $repository = null)
     {
         try {
             if (is_array($datfield)) {
@@ -37,7 +37,7 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
                 return $datfield;
             }
 
-            ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield);
+            ['doc' => $doc, 'path' => $path] = $this->_extractJsonParts($datfield, $repository);
 
             $expr = new FunctionExpression('JSON_EXTRACT', [$doc => 'identifier', $path => 'literal']);
 
@@ -88,12 +88,14 @@ class DatFieldMysql extends Mysql implements DatFieldDriverInterface
      * Utility function to parse needed parts for JSON_EXTRACT or JSON_SET functions
      *
      * @param  string $datfield Datfield
+     * @param  string|null|false $repository Repository. IF set to false, existing model will be removed
      * @return array            Parts as doc and path
      */
-    protected function _extractJsonParts(string $datfield): array
+    protected function _extractJsonParts(string $datfield, $repository = null): array
     {
-        ['model' => $model, 'field' => $field, 'path' => $path] = $this->parseDatField($datfield);
-        $field = $model ? implode('.', [$model, $field]) : $field;
+        ['model' => $model, 'field' => $field, 'path' => $path] =
+          $this->parseDatField($datfield, $repository ? $repository : null);
+        $field = $repository !== false && $model ? implode('.', [$model, $field]) : $field;
         // Avoid adding a starting dot in path if querying an array or using joker
         $path = in_array($path[0], ['[', '*']) ? '$' . $path : implode('.', ['$', $path]);
         $path = "'" . $path . "'";

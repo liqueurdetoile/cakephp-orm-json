@@ -5,7 +5,6 @@ namespace Lqdt\OrmJson\ORM\Association\Loader;
 
 use Cake\ORM\Association;
 use Cake\ORM\Association\Loader\SelectLoader;
-use Cake\ORM\Query;
 use Lqdt\OrmJson\DatField\DatFieldParserTrait;
 
 class DatFieldSelectLoader extends SelectLoader
@@ -15,7 +14,7 @@ class DatFieldSelectLoader extends SelectLoader
     /**
      * @inheritDoc
      */
-    protected function _buildResultMap(Query $fetchQuery, array $options): array
+    protected function _buildResultMap($fetchQuery, $options): array
     {
         $resultMap = [];
         $singleResult = in_array($this->associationType, [Association::MANY_TO_ONE, Association::ONE_TO_ONE], true);

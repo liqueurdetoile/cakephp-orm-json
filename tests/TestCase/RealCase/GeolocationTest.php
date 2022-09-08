@@ -48,6 +48,8 @@ class GeolocationTest extends TestCase
 
     public function setUp(): void
     {
+        $this->skipIf(COMPAT_MODE, 'Not working in CakePHP 3.x per query builder functionnalities');
+
         parent::setUp();
 
         /** @phpstan-ignore-next-line */

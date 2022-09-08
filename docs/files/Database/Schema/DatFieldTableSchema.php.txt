@@ -1,0 +1,17 @@
+<?php
+declare(strict_types=1);
+
+namespace Lqdt\OrmJson\Database\Schema;
+
+use Cake\Database\Schema\TableSchema;
+
+/**
+ * These upgraded schema provides convenience to handle data types into JSON data
+ *
+ * @license MIT
+ */
+class DatFieldTableSchema extends TableSchema implements DatFieldTableSchemaInterface
+{
+    use DatFieldTableSchemaTrait;
+}
+
