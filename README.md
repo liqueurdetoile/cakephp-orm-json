@@ -1,11 +1,12 @@
 [![Latest Stable Version](https://img.shields.io/github/release/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 ![2.x-next status](https://github.com/liqueurdetoile/cakephp-orm-json/actions/workflows/ci.yml/badge.svg?branch=2.x-next)
 [![Coverage Status](https://coveralls.io/repos/github/liqueurdetoile/cakephp-orm-json/badge.svg?branch=master)](https://coveralls.io/github/liqueurdetoile/cakephp-orm-json?branch=master)
+![PR_Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 [![license](https://img.shields.io/github/license/liqueurdetoile/cakephp-orm-json.svg?style=flat-square)](https://packagist.org/packages/liqueurdetoile/cakephp-orm-json)
 
 # Cake-orm-json plugin
 
-**This branch is for CakePHP >=4.3.5. It supports PHP ^7.2|^8.0**
+**This branch is for CakePHP >=3.7 <5. It supports PHP ^7.2|^8.0**
 **For previous CakePHP versions, please use v1 of this plugin**
 
 This plugin extends usual CakePHP ORM operations with JSON fields. It embeds a special [datfield notation](#datfield-format) that allow to easily target a path into a JSON field data. With it, you can :
@@ -17,7 +18,7 @@ This plugin extends usual CakePHP ORM operations with JSON fields. It embeds a s
 
 **Relational databases are not primarily designed** to handle non-schemed data and using JSON data fields can issue really bad performances. Nevertheless the newest releases of engines have also show significant improvements in dealing with JSON data and raising of NoSQL has created different needs and constraints.
 
-**Caution : As with version 2.0.0, it only works with Mysql databases >= 5.7.8. Setup is done to allow use of this plugin with other engines and I hope to release it at least for MariaDB, SQLite and PostgreSQL. Any help would be very appreciated though :smile**
+**Caution : As with version 2.0.0, it only works with Mysql databases >= 5.7.8. Setup is done to allow adding other engines to this plugin and I hope to release it at least for MariaDB and SQLite, maybe PostgreSQL. Any help would be very appreciated though :smile**
 
 ## Installation
 
@@ -29,6 +30,12 @@ composer require liqueurdetoile/cakephp-orm-json
 ```
 
 The base namespace of the plugin is `Lqdt\OrmJson`.
+
+**Important :** If you plan to use this plugin with Cakephp 3.x, you must enable compatibility mode by adding this line to your `config/bootstrap.php` in order to setup required classes alias from Cakephp 4.x :
+
+```php
+\Lqdt\OrmJson\DatField\Compat3x::enable();
+```
 
 ### Recommended setup
 This plugin is working by cloning the used connection in order to upgrade its driver and insert a translation step that will allow to parse datfield notation into a suitable form that can then be used by cakePHP ORM. Obviously, adding this layer if not using datfield notation is pretty useless.
@@ -325,6 +332,18 @@ $e->isDirty(); // true
 
 **Note :** If you call `setDirty('attributes', false)`, all currently dirty paths in`attributes` will cleared as well.
 
+#### Note for PHPStan users
+
+If you're using PHPStan and curly syntax to access your data, you will obviously have errors about accessing undefined properties on entities. To cope with these, this plugin provides a service to check if owning field exists in entity class and if it is typed as an array. To enable the service, simply add this snippet in your `phpstan.neon.dist` or whatsoever configuration file :
+
+```
+services:
+  -
+    class:  Lqdt\OrmJson\PHPStan\CurlyDatFieldNotation
+    tags:
+      - phpstan.broker.propertiesClassReflectionExtension
+```
+
 ### Using JSON data types
 
 There's some caveats when dealing with data types inside JSON. By itself JSON type handles natively null and usual scalar types : boolean, integer, float or string, plus arrays and objects of previous. Troubles may begin when you want to handle other types stored in JSON and the perfect example is datetime.
@@ -410,17 +429,26 @@ In order to use datfield as foreign key, simply use datfield counterpart of any 
 $Clients->datFieldHasOne('Agents', ['foreignKey' => 'data->agent_id']);
 $Clients->datFieldBelongsToMany('Products', [
   'foreignKey' => 'data->client_id'
-  'targetForeignKey' => 'data->product_id'
+  'targetForeignKey' => 'data->product_id',
+  'through' => 'Orders'
 ]);
 ```
 
-The full list :
+All others options and functionnalities remains the same.
+
+The counterparts list :
+
 - `belongsTo` <=> `datFieldBelongsToMany`
 - `hasOne` <=> `datFieldHasOne`
+- `hasMany` <=> `datFieldHasMany`
 - `belongsToMany` <=> `datFieldBelongsToMany`
-- `belongsToManyThrough` <=> `datFieldBelongsToManyThrough`
 
-**Note :** In MySQL, you can also use [virtual columns](https://vladmihalcea.com/index-json-columns-mysql/) to index JSON data.
+**Note :** No need to say that connection must be upgraded for these queries to work.
+
+**Note :** In MySQL, you may use [virtual columns](https://vladmihalcea.com/index-json-columns-mysql/) to index JSON data as a more efficient solution.
+
+#### Limitations with CakePHP 3.x
+The only limitation is that you cannot use `link`, `unlink` or save associated data when models are joined by `datFieldBelongsToMany` or `datFieldBelongsToManyThrough`. This is due to an heavy inner refactoring of how it is handled by CakePHP since version 4 release and there's now way to handle both with this plugin.
 
 ## Advanced setup
 This plugin contains :
