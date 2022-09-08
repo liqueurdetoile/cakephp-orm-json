@@ -100,7 +100,7 @@ jobs:
       run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
 
     - name: Run PHPUnit (No coverage)
-      if: matrix.coverage == 'none' && matrix.prefer-lowest <> 'prefer-lowest'
+      if: matrix.coverage == 'none' && matrix.prefer-lowest != 'prefer-lowest'
       run: vendor/bin/phpunit
 
     - name: Run PHPUnit (With coverage)
