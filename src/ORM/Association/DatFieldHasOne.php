@@ -1,0 +1,30 @@
+<?php
+declare(strict_types=1);
+
+namespace Lqdt\OrmJson\ORM\Association;
+
+use Cake\ORM\Association\HasOne;
+use Closure;
+use Lqdt\OrmJson\ORM\Association\Loader\DatFieldSelectLoader;
+
+class DatFieldHasOne extends HasOne
+{
+    /**
+     * @inheritDoc
+     */
+    public function eagerLoader(array $options): Closure
+    {
+        $loader = new DatFieldSelectLoader([
+            'alias' => $this->getAlias(),
+            'sourceAlias' => $this->getSource()->getAlias(),
+            'targetAlias' => $this->getTarget()->getAlias(),
+            'foreignKey' => $this->getForeignKey(),
+            'bindingKey' => $this->getBindingKey(),
+            'strategy' => $this->getStrategy(),
+            'associationType' => $this->type(),
+            'finder' => [$this, 'find'],
+        ]);
+
+        return $loader->buildEagerLoader($options);
+    }
+}

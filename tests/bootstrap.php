@@ -1,37 +1,38 @@
 <?php
+declare(strict_types=1);
+
+use Cake\Datasource\ConnectionManager;
+use CakephpTestSuiteLight\Sniffer\MysqlTriggerBasedTableSniffer;
+use Migrations\TestSuite\Migrator;
+
 /**
- * Test suite bootstrap for PluginTemplate.
- *
- * This function is used to find the location of CakePHP whether CakePHP
- * has been installed as a dependency of the plugin, or the plugin is itself
- * installed as a dependency of an application.
+ * Test suite bootstrap for CakephpOrmJson plugin
+ * We handle here the configuration to support matrix between :
+ * - Cakephp versions : 3.5, 4.1, latest
+ * - Database engines : Mysql, SQLite, ...
  */
-$dsn = env('TRAVIS', false) ?
-  //'mysql://root:datpassword@localhost/cakeormjson_test' :
-  'mysql://root@localhost/cakeormjson_test' :
-  'mysql://root@localhost/cakeormjson_test';
+include_once 'config/common.php';
 
-putenv('db_dsn=' . $dsn);
-
-$findRoot = function ($root) {
-    do {
-        $lastRoot = $root;
-        $root = dirname($root);
-        if (is_dir($root . '/vendor/cakephp/cakephp')) {
-            return $root;
-        }
-    } while ($root !== $lastRoot);
-
-    throw new Exception("Cannot find the root of the application, unable to run tests");
-};
-$root = $findRoot(__FILE__);
-unset($findRoot);
-
-chdir($root);
-
-if (file_exists($root . '/config/bootstrap.php')) {
-    require $root . '/config/bootstrap.php';
-
-    return;
+// Build DSN for local/CI testing
+switch (env('DB_FAMILY')) {
+    case 'mysql':
+        $dsn = 'mysql://root:root@127.0.01/cakephp_orm_json';
+        $sniffer = MysqlTriggerBasedTableSniffer::class;
+        break;
+    default:
+        // Fallback on local config. Should be updated as needed
+        $dsn = 'mysql://root@localhost/cakeormjson_test?log=false';
+        $sniffer = MysqlTriggerBasedTableSniffer::class;
 }
-require $root . '/vendor/cakephp/cakephp/tests/bootstrap.php';
+
+// Creates test connection
+ConnectionManager::setConfig('test', [
+  'url' => env('DB_URL', $dsn),
+  'tableSniffer' => $sniffer,
+]);
+
+define('COMPAT_MODE', false);
+
+// Run migrations
+$migrator = new Migrator();
+$migrator->run([], false);

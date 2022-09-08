@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '2.x-next'
+  pull_request:
+    branches:
+      - '*'
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+  testsuite:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['7.2', '7.4', '8.0', '8.1', '8.2']
+        db-family: ['mysql']
+        db-version: ['mysql-8']
+        coverage: ['']
+        prefer-lowest: ['']
+        include:
+          - php-version: '7.4'
+            db-family: 'mysql'
+            db-version: 'mysql-8'
+            coverage: 'pcov'
+          - php-version: '7.4'
+            db-family: 'mysql'
+            db-version: 'mysql-5.7'
+            prefer-lowest: 'prefer-lowest'
+          # - php-version: '7.4'
+          #   db-family: 'mariadb'
+          #   db-version: '10.2'
+          # - php-version: '7.4'
+          #   db-family: 'mariadb'
+          #   db-version: 'latest'
+
+    env:
+      PHP_VERSION: ${{ matrix.php-version }}
+      DB_FAMILY: ${{ matrix.db-family }}
+      DB_VERSION: ${{ matrix.db-version }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup MySQL 5.7
+      if: matrix.db-version == 'mysql-5.7'
+      run: docker run --rm --name=mysqld -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cakephp_orm_json -p 3306:3306 -d mysql:5.7 --character-set-server=utf8
+
+    - name: Setup MySQL 8 (latest)
+      if: matrix.db-version == 'mysql-8'
+      run: docker run --rm --name=mysqld -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cakephp_orm_json -p 3306:3306 -d mysql --default-authentication-plugin=mysql_native_password --disable-log-bin
+
+    - name: Setup MariaDB
+      uses: getong/mariadb-action@v1.1
+      if: matrix.db-family == 'mariadb'
+      with:
+        mariadb version: ${{ matrix.db-version }}
+        mysql database: 'cakephp_orm_json'
+        mysql root password: 'root'
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, intl, apcu, memcached, redis, pdo_${{ matrix.db-family }}
+        ini-values: apc.enable_cli = 1
+        tools: cs2pr
+        coverage: ${{ matrix.coverage }}
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+    - name: Get date part for cache key
+      id: key-date
+      run: echo "::set-output name=date::$(date +'%Y-%m')"
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ steps.key-date.outputs.date }}-${{ hashFiles('composer.json') }}-${{ matrix.prefer-lowest }}
+
+    - name: Composer install
+      run: |
+        if ${{ matrix.prefer-lowest == 'prefer-lowest' }}; then
+          composer enable-compat
+        elif ${{ matrix.php-version == '8.2' }}; then
+          composer update --ignore-platform-req=php
+        else
+          composer update
+        fi
+
+    - name: Wait for MySQL/MariaDB
+      if: matrix.db-family == 'mysql' || matrix.db-family == 'mariadb'
+      run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
+
+    - name: Run PHPUnit (No coverage)
+      if: matrix.coverage == 'none' && matrix.prefer-lowest != 'prefer-lowest'
+      run: vendor/bin/phpunit
+
+    - name: Run PHPUnit (With coverage)
+      if: matrix.coverage == 'pcov'
+      run: |
+        vendor/bin/phpunit -c phpunit.coverage.xml.dist --coverage-clover logs/clover.xml
+        composer global require php-coveralls/php-coveralls
+        php-coveralls --coverage_clover=logs/clover.xml --json_path=logs/coveralls-upload.json -v
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run PHPUnit (Legacy)
+      if: matrix.prefer-lowest == 'prefer-lowest'
+      run: vendor/bin/phpunit -c phpunit.compat.xml.dist
+
+    - name: Run PHP CodeSniffer
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
+      run: vendor/bin/phpcs --report=checkstyle src/ tests/ | cs2pr
+
+    - name: Run PHPstan
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
+      run: composer stan-github

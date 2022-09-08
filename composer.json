@@ -3,7 +3,7 @@
     "description": "Cakephp plugin to provide easy control over JSON type fields in database",
     "type": "cakephp-plugin",
     "license": "MIT",
-    "version": "1.5.4",
+    "version": "2.0.0-dev",
     "authors": [
         {
             "name": "Liqueur de Toile",
@@ -29,14 +29,21 @@
       "filter"
     ],
     "require": {
-        "php": "^7.1",
-        "cakephp/cakephp": "^3.5|^4",
-        "adbario/php-dot-notation": "^2.0"
+        "php": "^7.2|^8.0",
+        "cakephp/cakephp": ">=3.7 <5",
+        "adbario/php-dot-notation": "^2.1",
+        "mustache/mustache": "^2.13"
     },
     "require-dev": {
-        "phpunit/phpunit": "^5.7.14|^6.0",
-        "phpunit/php-code-coverage": "5.3",
-        "phpstan/phpstan": "^0.10.1"
+        "phpunit/phpunit": "^6|^8.5|^9.3",
+        "phpstan/phpstan": "^0.10|^1.8",
+        "phpstan/extension-installer": "^1.1",
+        "cakephp/cakephp-codesniffer": "^4.5",
+        "cakephp/migrations": "^2.4|^3.2",
+        "fakerphp/faker": "^1.20",
+        "cakedc/cakephp-phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^1.1",
+        "vierge-noire/cakephp-test-suite-light": "^2.4"
     },
     "autoload": {
         "psr-4": {
@@ -50,8 +57,25 @@
         }
     },
     "scripts": {
-        "test": "phpunit && phpstan analyse -l 5 src",
+        "test": "phpunit && phpstan analyze --memory-limit 1G",
         "doc": "php phpDocumentor.phar -d ./src -t ./docs",
-        "phpstan": "phpstan analyse -l 5 src"
+        "stan": "phpstan analyze --memory-limit 1G",
+        "stan-github": "phpstan analyze --memory-limit 1G --error-format=github",
+        "enable-compat": [
+          "composer remove cakedc/cakephp-phpstan phpstan/phpstan-phpunit vierge-noire/cakephp-test-suite-light --dev",
+          "composer update --prefer-lowest",
+          "composer require vierge-noire/cakephp-test-suite-light:^1.2 vierge-noire/cakephp-test-migrator:^1.5 --dev --prefer-lowest -W"
+        ],
+        "disable-compat": [
+          "composer remove vierge-noire/cakephp-test-suite-light vierge-noire/cakephp-test-migrator --dev",
+          "composer update",
+          "composer require --dev cakedc/cakephp-phpstan phpstan/phpstan-phpunit vierge-noire/cakephp-test-suite-light"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
     }
 }

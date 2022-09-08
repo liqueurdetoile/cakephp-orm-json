@@ -1,0 +1,57 @@
+<?php
+declare(strict_types=1);
+
+namespace Lqdt\OrmJson\ORM\Association\Loader;
+
+use Cake\ORM\Association;
+use Cake\ORM\Association\Loader\SelectLoader;
+use Lqdt\OrmJson\DatField\DatFieldParserTrait;
+
+class DatFieldSelectLoader extends SelectLoader
+{
+    use DatFieldParserTrait;
+
+    /**
+     * @inheritDoc
+     */
+    protected function _buildResultMap($fetchQuery, $options): array
+    {
+        $resultMap = [];
+        $singleResult = in_array($this->associationType, [Association::MANY_TO_ONE, Association::ONE_TO_ONE], true);
+        $keys = in_array($this->associationType, [Association::ONE_TO_ONE, Association::ONE_TO_MANY], true) ?
+            $this->foreignKey :
+            $this->bindingKey;
+        $key = (array)$keys;
+
+        // If foreign key have been aliased, we must update foreign key to match data correctly
+        $select = array_flip($fetchQuery->clause('select'));
+        $key = array_map(function ($k) use ($fetchQuery, $select) {
+            if ($this->isDatField($k)) {
+                if (empty($this->getDatFieldPart('model', $k))) {
+                    $k = $fetchQuery->getRepository()->getAlias() . '.' . $k;
+                }
+
+                if (is_int($select[$k] ?? false)) {
+                    $select[$k] = $this->aliasDatField($k);
+                }
+            }
+
+            return $select[$k] ?? $k;
+        }, $key);
+
+        foreach ($fetchQuery->all() as $result) {
+            $values = [];
+            foreach ($key as $k) {
+                // use datfield reader function to allow parsing of datfield primary keys
+                $values[] = $this->getDatFieldValueInData($k, $result);
+            }
+            if ($singleResult) {
+                $resultMap[implode(';', $values)] = $result;
+            } else {
+                $resultMap[implode(';', $values)][] = $result;
+            }
+        }
+
+        return $resultMap;
+    }
+}

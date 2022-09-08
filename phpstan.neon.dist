@@ -1,0 +1,16 @@
+parameters:
+    level: 7
+    bootstrapFiles:
+        - tests/config/common.php
+    checkMissingIterableValueType: false
+    treatPhpDocTypesAsCertain: false
+    checkGenericClassInNonGenericObjectType: false
+    paths:
+        - src
+        - tests
+
+services:
+  -
+    class:  Lqdt\OrmJson\PHPStan\CurlyDatFieldNotation
+    tags:
+      - phpstan.broker.propertiesClassReflectionExtension
