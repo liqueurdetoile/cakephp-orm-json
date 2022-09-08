@@ -19,7 +19,7 @@ jobs:
         php-version: ['7.2', '7.4', '8.0', '8.1', '8.2']
         db-family: ['mysql']
         db-version: ['mysql-8']
-        coverage: ['none']
+        coverage: ['']
         prefer-lowest: ['']
         include:
           - php-version: '7.4'
@@ -29,8 +29,7 @@ jobs:
           - php-version: '7.4'
             db-family: 'mysql'
             db-version: 'mysql-5.7'
-            coverage: 'none'
-            prefer-lowest: ['prefer-lowest']
+            prefer-lowest: 'prefer-lowest'
           # - php-version: '7.4'
           #   db-family: 'mariadb'
           #   db-version: '10.2'
