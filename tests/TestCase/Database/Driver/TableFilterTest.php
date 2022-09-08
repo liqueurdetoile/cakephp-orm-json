@@ -80,6 +80,12 @@ class TableFilterTest extends TestCase
 
         $q = $this->Objects->find()->where(['attributes->missing IS NOT' => null]);
         $this->assertEquals(0, $q->count());
+
+        // Ignore missing key option
+        $q = $this->Objects
+          ->find('all', ['ignoreMissingPath' => true])
+          ->where(['attributes->missing IS' => null]);
+        $this->assertEquals(0, $q->count());
     }
 
     public function whereOnNullData(): array
