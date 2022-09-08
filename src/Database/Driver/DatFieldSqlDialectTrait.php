@@ -97,6 +97,7 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
+                debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 
@@ -201,16 +202,32 @@ trait DatFieldSqlDialectTrait
 
     /**
      * Processes casters queue and applies it to a whole row
+     * For SELECT statements, the selectmap must be provided in order to
+     * parse correctly selected fields from JSON field
      *
      * @param  array $row                   Row data
      * @param  array $casters               Casters queue
      * @param \Cake\Database\Query $query   Query
+     * @param \Lqdt\OrmJson\Database\JsonTypeMap|null $selectmap JSON type map for selected fields. Do not use if not in SELECT statement
      * @return array
      */
-    protected function _castRow(array $row, array $casters, Query $query): array
+    protected function _castRow(array $row, array $casters, Query $query, ?JsonTypeMap $selectmap = null): array
     {
+        $decoder = function ($value) {
+            return json_decode($value, true);
+        };
+
         foreach ($casters as $datfield => $caster) {
             try {
+                if ($selectmap) {
+                    // Check select type map for automapped aliased field that's need to be decoded before sent to type callback
+                    $type = $selectmap->type($datfield);
+                    if ($type && $type !== '__auto_json__' && !$this->isDatField($datfield)) {
+                        /** @var array $row */
+                        $row = $this->applyCallbackToData($datfield, $row, $decoder);
+                    }
+                }
+
                 /** @var array $row */
                 $row = $this->applyCallbackToData($datfield, $row, $caster, $row, $query);
             } catch (MissingPathInDataDatFieldException $err) {
@@ -283,9 +300,9 @@ trait DatFieldSqlDialectTrait
 
                 // Translate group clause
                 if ($clause === 'group' && !empty($part)) {
-                    $query = $query->group(array_map(function ($field) use ($map) {
+                    $query = $query->group(array_map(function ($field) {
                         /** @phpstan-ignore-next-line */
-                        return (string)$this->translateDatField($field, (bool)$map->type($field));
+                        return (string)$this->translateDatField($field);
                     }, $part), true);
                 }
 
@@ -310,8 +327,8 @@ trait DatFieldSqlDialectTrait
         // Registers JSON types to be applied to incoming data
         $casters = $selectmap->getCasters($query, 'toPHP') + $map->getCasters($query, 'toPHP');
         if (!empty($casters)) {
-            $query->decorateResults(function ($row) use ($casters, $query) {
-                $row = $this->_castRow($row, $casters, $query);
+            $query->decorateResults(function ($row) use ($casters, $query, $selectmap) {
+                $row = $this->_castRow($row, $casters, $query, $selectmap);
 
                 return $row;
             });
@@ -668,8 +685,7 @@ trait DatFieldSqlDialectTrait
 
             // Update alias target
             $map->setAlias($palias ?? $field, $alias);
-            // Translate field. It will be unquoted if a specific data type is provided
-            $updatedFields[$alias] = $this->translateDatField($field, $map->type($alias) !== 'json');
+            $updatedFields[$alias] = $this->translateDatField($field);
         }
 
         $query->select($updatedFields, true);
