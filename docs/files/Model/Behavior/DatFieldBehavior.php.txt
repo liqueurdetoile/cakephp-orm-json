@@ -1,20 +1,26 @@
 <?php
+declare(strict_types=1);
+
 /**
  * JSON behavior for cakePHP framework
+ *
  * @license MIT
  * @author  Liqueur de Toile <contact@liqueurdetoile.com>
  */
 namespace Lqdt\OrmJson\Model\Behavior;
 
-use \ArrayObject;
-use Adbar\Dot;
-use Cake\Core\Exception\Exception;
-use Cake\Database\Driver\Mysql;
-use Cake\Datasource\ConnectionManager;
-use Cake\Event\Event;
+use ArrayObject;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\Behavior;
-use Lqdt\OrmJson\Database\Driver\DatFieldMysql;
-use Lqdt\OrmJson\Utility\DatField;
+use Cake\ORM\Query;
+use Cake\ORM\Table;
+use Lqdt\OrmJson\DatField\DatFieldParserTrait;
+use Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo;
+use Lqdt\OrmJson\ORM\Association\DatFieldBelongsToMany;
+use Lqdt\OrmJson\ORM\Association\DatFieldHasMany;
+use Lqdt\OrmJson\ORM\Association\DatFieldHasOne;
+use Lqdt\OrmJson\ORM\DatFieldAwareTrait;
 
 /**
  * This CakePHP behavior adds support to performs mysql queries into JSON fields
@@ -32,164 +38,219 @@ use Lqdt\OrmJson\Utility\DatField;
  */
 class DatFieldBehavior extends Behavior
 {
-    private $_extractOnSelect = false;
-    private $_keepNestedOnExtract = false;
-    private $_extractAliasSeparator = '_';
-    private $_extractAliasLowercased = true;
-    private $_extractAliasTemplate = '{{model}}{{separator}}{{field}}{{separator}}{{path}}';
-    private $_foreignKeys = [];
+    use DatFieldAwareTrait;
+    use DatFieldParserTrait;
 
     /**
-     * At initialization the behavior will check current connection driver.
+     * At initialization the behavior will check current connection driver and upgrades it if needed.
      *
-     * If current connection driver is not DatFieldMysql, it will load/create a new collection with this driver
-     *
-     * @version 1.0.0
-     * @since   2.0.0
-     * @param   array     $config Table configuration
+     * @param   array $config Table configuration
      * @return  void
      */
-    public function initialize(array $config) : void
+    public function initialize(array $config): void
     {
-        $connection = $this->getTable()->getConnection();
-        $config = $connection->config();
-        $driver = $connection->getDriver();
+        $upgrade = $config['upgrade'] ?? false;
 
-        if ($driver instanceof DatFieldMysql) {
+        if ($upgrade) {
+            $this->useDatFields();
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function useDatFields(bool $enabled = true): Table
+    {
+        return $enabled ?
+          $this->_upgradeConnectionForDatFields($this->_getTable()) :
+          $this->_downgradeConnectionForDatFields($this->_getTable());
+    }
+
+    /**
+     * Parse datfield keys from raw data used in newEntity or PatchEntity methods into nested array values
+     * It alos take cares of applying Json type Map to inbound values
+     *
+     * @param \Cake\Event\EventInterface $event Event
+     * @param \ArrayObject $data Data
+     * @param \ArrayObject $options Options
+     * @return  void
+     */
+    public function beforeMarshal(EventInterface $event, ArrayObject $data, ArrayObject $options): void
+    {
+        if (!$this->_datFieldsEnabled) {
             return;
         }
 
-        if (!$driver instanceof Mysql) {
-            throw new Exception('DatField driver can only be used with Mysql');
+        $copy = $data->getArrayCopy();
+
+        // Enable merging for all fields if no option is given
+        $merging = $options['jsonMerge'] ?? false;
+        $forMerging = [];
+
+        if ($merging === true) {
+            $merging = ['*'];
         }
 
-        if (!$driver->supportsNativeJson()) {
-            throw new Exception('Your mysql server does not support JSON columns. Please upgrade to version 5.7.0 or above');
-        }
+        // Loads JSON types
+        $this->_setTransientJsonTypes($options['jsonTypeMap'] ?? null);
+        /** @var \Lqdt\OrmJson\Database\Schema\DatFieldTableSchemaInterface $schema */
+        $schema = $this->_getTable()->getSchema();
+        $jmap = $schema->getJsonTypeMap();
 
-        // Try to get already created datfield connection
-        $name = $config['name'] . '__DatFieldMysql__';
-        try {
-            $connection = ConnectionManager::get($name);
-        } catch (\Exception $err) {
-            $config['name'] = $name;
-            $config['className'] = 'Cake\Database\Connection';
-            $config['driver'] = 'Lqdt\OrmJson\Database\Driver\DatFieldMysql';
-            ConnectionManager::setConfig($name, $config);
-            $connection = ConnectionManager::get($name);
-        }
-
-        $this->getTable()->setConnection($connection);
-    }
-
-    /**
-     * Parse datfield from raw data used in newEntity or PatchEntity methods into nested array values
-     *
-     * When using patchEntity, a call to jsonMerge must be done to merge old and new values or
-     * new data will simply replaces previous one in the JSON field.
-     *
-     * @version 1.0.0
-     * @since   1.1.0
-     * @param   Event         $event   Event
-     * @param   ArrayObject   $data    Data
-     * @param   ArrayObject   $options Options
-     * @return  void
-     * @see \Lqdt\OrmJson\Model\Entity\JsonTrait::jsonMerge()
-     */
-    public function beforeMarshal(Event $event, ArrayObject $data, ArrayObject $options) : void
-    {
-        $dot = new Dot();
-        $map = $data->getArrayCopy();
-
-        foreach ($map as $field => $value) {
+        foreach ($copy as $field => $value) {
             // Convert datfield and parse dotfield
-            if (DatField::isDatField($field)) {
-                $path = DatField::buildAliasFromTemplate($field, '{{field}}.{{path}}', '.');
-                $dot->set($path, $value);
+            if ($this->isDatField($field)) {
+                $caster = $jmap->getCaster($field, null, 'marshal');
+                if (!empty($caster)) {
+                    $value = $caster($value);
+                }
+                $fieldname = $this->getDatFieldPart('field', $field);
+                $this->setDatFieldValueInData($field, $value, $data);
                 $data->offsetUnset($field);
+                // Register field for later merging if enabled
+                if ($merging && in_array('*', (array)$merging) || in_array($fieldname, (array)$merging)) {
+                    $forMerging[] = $fieldname;
+                }
             }
         }
 
-        $dot = $dot->all();
-        foreach ($dot as $field => $value) {
-            $data->offsetSet($field, $value);
-        }
+        $options->offsetSet('jsonMerge', array_unique($forMerging));
     }
 
-    public function getExtractOnSelect() : bool
-    {
-        return $this->_extractOnSelect;
-    }
-
-    public function setExtractOnSelect(bool $extract)
-    {
-        $this->_extractOnSelect = $extract;
-        return $this->getTable();
-    }
-
-    public function getKeepNestedOnExtract() : bool
-    {
-        return $this->_keepNestedOnExtract;
-    }
-
-    public function getExtractAliasSeparator() : string
-    {
-        return $this->_extractAliasSeparator;
-    }
-
-    public function setExtractAliasSeparator($separator)
-    {
-        if ($separator === false) {
-            $this->_keepNestedOnExtract = true;
-            $this->_extractAliasSeparator = '\.';
-        } else {
-            $this->_keepNestedOnExtract = false;
-            $this->_extractAliasSeparator = $separator === '.' ? '\.' : $separator;
-        }
-        return $this->getTable();
-    }
-
-    public function isExtractAliasLowercased() : bool
-    {
-        return $this->_extractAliasLowercased;
-    }
-
-    public function setExtractAliasLowercased(bool $lowercased)
-    {
-        $this->_extractAliasLowercased = $lowercased;
-        return $this->getTable();
-    }
-
-    public function getExtractAliasTemplate() : string
-    {
-        return $this->_extractAliasTemplate;
-    }
-
-    public function setExtractAliasTemplate(string $template)
-    {
-        $this->_extractAliasTemplate = $template;
-        return $this->getTable();
-    }
-
-    public function registerForeignKey(string $field, string $path = null)
-    {
-        if (DatField::isDatField($field)) {
-            ['field' => $field, 'path' => $path, 'model' => $model] = DatField::getDatFieldParts($field, $this->getTable()->getAlias());
-        } else {
-            $model = $this->getTable()->getAlias();
+    /**
+     * Handles merging of datfield data given each field configuration
+     *
+     * @param \Cake\Event\EventInterface $event Event
+     * @param \Cake\Datasource\EntityInterface $entity New entity
+     * @param \ArrayObject $data Data
+     * @param \ArrayObject $options Options
+     * @return void
+     */
+    public function afterMarshal(
+        EventInterface $event,
+        EntityInterface $entity,
+        \ArrayObject $data,
+        \ArrayObject $options
+    ): void {
+        if (!$this->_datFieldsEnabled) {
+            return;
         }
 
-        $property = $path . '@' . $model . '.' . $field;
-
-        $fk = compact('field', 'path', 'property');
-        if (!in_array($fk, $this->_foreignKeys)) {
-            $this->_foreignKeys[] = $fk;
-        }
+        $this->jsonMerge($entity, $options->offsetGet('jsonMerge'));
     }
 
-    public function getForeignKeys()
+    /**
+     * Enables transient JSON types provided through query options
+     *
+     * @param \Cake\Event\EventInterface $event Event
+     * @param \Cake\ORM\Query $query Query
+     * @param \ArrayObject $options Options
+     * @return \Cake\ORM\Query
+     */
+    public function beforeFind(EventInterface $event, Query $query, \ArrayObject $options): Query
     {
-        return $this->_foreignKeys;
+        if (!empty($options['jsonTypeMap'])) {
+            $this->_setTransientJsonTypes($options['jsonTypeMap'] ?? null);
+            // Force query to reload types
+            $query->addDefaultTypes($this->_getTable());
+        }
+
+        return $query;
+    }
+
+    /**
+     * Enables transient JSON types provided through query options
+     *
+     * @param \Cake\Event\EventInterface $event Event
+     * @param \Cake\Datasource\EntityInterface $entity Entity
+     * @param \ArrayObject $options Options
+     * @return void
+     */
+    public function beforeSave(EventInterface $event, EntityInterface $entity, \ArrayObject $options): void
+    {
+        $this->_setTransientJsonTypes($options['jsonTypeMap'] ?? null);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function datFieldBelongsTo(string $associated, array $options = []): DatFieldBelongsTo
+    {
+        $table = $this->_getTable();
+        $options += ['sourceTable' => $table];
+
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsTo $association */
+        $association = $table->associations()->load(DatFieldBelongsTo::class, $associated, $options);
+
+        return $association;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function datFieldHasOne(string $associated, array $options = []): DatFieldHasOne
+    {
+        $table = $this->_getTable();
+        $options += ['sourceTable' => $table];
+
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasOne $association */
+        $association = $table->associations()->load(DatFieldHasOne::class, $associated, $options);
+
+        return $association;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function datFieldHasMany(string $associated, array $options = []): DatFieldHasMany
+    {
+        $table = $this->_getTable();
+        $options += ['sourceTable' => $table];
+
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldHasMany $association */
+        $association = $table->associations()->load(DatFieldHasMany::class, $associated, $options);
+
+        return $association;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function datFieldBelongsToMany(string $associated, array $options = []): DatFieldBelongsToMany
+    {
+        $table = $this->_getTable();
+        $options += ['sourceTable' => $table];
+
+        /** @var \Lqdt\OrmJson\ORM\Association\DatFieldBelongsToMany $association */
+        $association = $table->associations()->load(DatFieldBelongsToMany::class, $associated, $options);
+
+        return $association;
+    }
+
+    /**
+     * Workaround for `getTable` deprecation as plugin should be kept compatible since 3.5+
+     *
+     * @return \Cake\ORM\Table
+     */
+    protected function _getTable(): Table
+    {
+        return method_exists($this, 'table') ? $this->table() : $this->getTable();
+    }
+
+    /**
+     * Registers the JSON types in table schema
+     *
+     * @param ?array $types  JSON types
+     * @return void
+     */
+    protected function _setTransientJsonTypes(?array $types): void
+    {
+        if ($this->_datFieldsEnabled && !empty($types)) {
+            /** @var \Lqdt\OrmJson\Database\Schema\DatFieldTableSchemaInterface $schema */
+            $schema = $this->_getTable()->getSchema();
+
+            $schema->setTransientJsonTypes($types);
+        }
     }
 }
 
