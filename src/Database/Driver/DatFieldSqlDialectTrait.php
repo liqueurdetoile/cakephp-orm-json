@@ -42,7 +42,7 @@ trait DatFieldSqlDialectTrait
     /**
      * @inheritDoc
      */
-    public function quoteIdentifier(string $identifier): string
+    public function quoteIdentifier($identifier): string
     {
         $identifier = trim($identifier);
 
@@ -74,7 +74,7 @@ trait DatFieldSqlDialectTrait
     /**
      * @inheritDoc
      */
-    public function queryTranslator(string $type): \Closure
+    public function queryTranslator($type): \Closure
     {
         // We must preprocess translation in order to let other translations be done with translated datfield
         return function (Query $query) use ($type) {
@@ -97,7 +97,6 @@ trait DatFieldSqlDialectTrait
                         break;
                 }
             } catch (\Error $err) {
-                debug($err);
                 Log::Error(sprintf('Error while processing datfields in query: %s', $err->getMessage()));
             }
 
@@ -110,12 +109,7 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Applies translator to any expression or SQL snippets
-     *
-     * @param string|array|\Cake\Database\ExpressionInterface $expression Literal or object expression
-     * @param \Cake\Database\Query $query       Query
-     * @param \Lqdt\OrmJson\Database\JsonTypeMap $jsonTypes JSON types definition
-     * @return string|array|\Cake\Database\ExpressionInterface Updated expression
+     * @inheritDoc
      */
     public function translateExpression($expression, Query $query, JsonTypeMap $jsonTypes)
     {
@@ -206,7 +200,7 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Processes casters queue and applies it to row
+     * Processes casters queue and applies it to a whole row
      *
      * @param  array $row                   Row data
      * @param  array $casters               Casters queue
@@ -242,21 +236,23 @@ trait DatFieldSqlDialectTrait
             $value = $caster($value);
         }
 
+        // Null case
         if (is_null($value)) {
-            $value = $query->func()->cast('null', 'JSON');
+            $value = $query->newExpr("CAST('null' AS JSON)");
         }
 
         // Boolean case, simply update value to its stringified JSON counterpart
         if (is_bool($value)) {
-            $value = $query->func()->cast($value ? 'true' : 'false', 'JSON');
+            $value = $value ? 'true' : 'false';
+            $value = $query->newExpr("CAST({$value} AS JSON)");
         }
 
         // Number case, we must cast value to JSON to avoid unexpected results with numeric strings
         if (is_integer($value) || is_float($value)) {
-            /** @phpstan-ignore-next-line */
-            $value = $query->func()->cast($value, 'JSON');
+            $value = $query->newExpr("CAST({$value} AS JSON)");
         }
 
+        // String or array/object case
         if (is_string($value) || is_array($value)) {
             $value = json_encode($value);
             $value = $query->newExpr("CAST('{$value}' AS JSON)");
@@ -478,7 +474,8 @@ trait DatFieldSqlDialectTrait
     }
 
     /**
-     * Translates an IdentifierExpression
+     * Translates an IdentifierExpression. Identifier is always unquoted as it can be used
+     * in complex OrderClauseExpression. Resulting DatFieldExpression is converted to string.
      *
      * @param \Cake\Database\Expression\IdentifierExpression $expression Expression
      * @param \Cake\Database\Query $query If `true returns indentifier instead of updated expression
@@ -516,8 +513,11 @@ trait DatFieldSqlDialectTrait
     ): QueryExpression {
         /** @phpstan-ignore-next-line */
         $datfield = (string)$this->translateDatField($datfield);
+        $ignoreMissingPath = $this->_getQueryOptions($query, 'ignoreMissingPath', false);
 
-        return $query->newExpr()->or([
+        return $ignoreMissingPath ?
+          $query->newExpr("{$datfield} = CAST('null' AS JSON)") :
+          $query->newExpr()->or([
             "{$datfield} IS" => null,
             $query->newExpr("{$datfield} = CAST('null' AS JSON)"),
         ]);
