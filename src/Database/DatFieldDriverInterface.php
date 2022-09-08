@@ -32,15 +32,17 @@ interface DatFieldDriverInterface extends DriverInterface
      * Translates a datfield notation into a valid driver dependent SQL FunctionExpression that allows
      * to identify and target data into a JSON field.
      *
+     * If a repository is prepended to datfield, il will be kept as is unless passing false as last argument
+     *
      * @param array|string|\Cake\Database\ExpressionInterface $datfield Datfield
      * @param  bool     $unquote                  If `true`, returned data should be unquoted
-     * @param  ?string  $repository               Repository alias
+     * @param  string|null|false  $repository               Repository alias
      * @return array|string|\Cake\Database\ExpressionInterface
      */
     public function translateDatField(
         $datfield,
         bool $unquote = false,
-        ?string $repository = null
+        $repository = null
     );
 
     /**

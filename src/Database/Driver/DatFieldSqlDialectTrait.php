@@ -472,7 +472,9 @@ trait DatFieldSqlDialectTrait
         // Checks if it's a datfield and transform value if needed
         if ($this->isDatField($field)) {
             $caster = $jsonTypes->getCaster($field, $query);
-            $field = $this->translateDatField($field);
+            // Disable alias for update and delete queries
+            $repository = in_array($query->type(), ['update', 'delete']) ? false : null;
+            $field = $this->translateDatField($field, false, $repository);
             $value = $expression->getValue();
             $operator = strtolower($expression->getOperator());
             if ($operator === 'in' && is_array($value)) {
