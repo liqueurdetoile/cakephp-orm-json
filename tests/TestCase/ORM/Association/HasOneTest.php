@@ -62,6 +62,7 @@ class HasOneTest extends TestCase
     {
         $clients = $this->Clients->find()->contain(['Contacts'])->toArray();
         $this->assertNotEmpty($clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         foreach ($clients as $client) {
             $this->assertNotEmpty($client->contact);
             $this->assertEquals($client->id, $client->contact->attributes['client_id']);

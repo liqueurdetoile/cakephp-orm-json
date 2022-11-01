@@ -84,6 +84,7 @@ class HasManyTest extends TestCase
     {
         $agents = $this->Agents->find()->contain(['Clients'])->toArray();
         $this->assertNotEmpty($agents);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         foreach ($agents as $agent) {
             $this->assertNotEmpty($agent->clients);
             foreach ($agent->clients as $client) {

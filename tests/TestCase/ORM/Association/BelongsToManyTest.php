@@ -129,6 +129,7 @@ class BelongsToManyTest extends TestCase
           ->toArray();
 
         $this->assertNotEmpty($agents);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Agent $agent */
         foreach ($agents as $agent) {
             $this->assertNotEmpty($agent->followers);
             foreach ($agent->followers as $client) {

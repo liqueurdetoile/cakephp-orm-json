@@ -19,7 +19,7 @@ jobs:
         php-version: ['7.2', '7.4', '8.0', '8.1', '8.2']
         db-family: ['mysql']
         db-version: ['mysql-8']
-        coverage: ['']
+        coverage: ['no-coverage']
         prefer-lowest: ['']
         include:
           - php-version: '7.4'
@@ -72,11 +72,11 @@ jobs:
 
     - name: Get composer cache directory
       id: composer-cache
-      run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Get date part for cache key
       id: key-date
-      run: echo "::set-output name=date::$(date +'%Y-%m')"
+      run: echo "name=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
       uses: actions/cache@v3
@@ -99,7 +99,7 @@ jobs:
       run: while ! `mysqladmin ping -h 127.0.0.1 --silent`; do printf 'Waiting for MySQL...\n'; sleep 2; done;
 
     - name: Run PHPUnit (No coverage)
-      if: matrix.coverage == 'none' && matrix.prefer-lowest != 'prefer-lowest'
+      if: matrix.coverage == 'no-coverage' && matrix.prefer-lowest != 'prefer-lowest'
       run: vendor/bin/phpunit
 
     - name: Run PHPUnit (With coverage)
@@ -116,9 +116,9 @@ jobs:
       run: vendor/bin/phpunit -c phpunit.compat.xml.dist
 
     - name: Run PHP CodeSniffer
-      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8' && matrix.coverage == 'no-coverage'}}
       run: vendor/bin/phpcs --report=checkstyle src/ tests/ | cs2pr
 
     - name: Run PHPstan
-      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8'}}
+      if: ${{ matrix.php-version == '7.4' && matrix.db-version == 'mysql-8' && matrix.coverage == 'no-coverage'}}
       run: composer stan-github

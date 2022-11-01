@@ -83,6 +83,7 @@ class BelongsToTest extends TestCase
     {
         $clients = $this->Clients->find()->contain(['Agents'])->toArray();
         $this->assertNotEmpty($clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         foreach ($clients as $client) {
             $this->assertNotEmpty($client->agent);
             $this->assertEquals($client['attributes']['agent_id'], $client->agent->id);
@@ -100,6 +101,7 @@ class BelongsToTest extends TestCase
           ->toArray();
 
         $this->assertNotEmpty($clients);
+        /** @var \Lqdt\OrmJson\Test\Model\Entity\Client $client */
         foreach ($clients as $client) {
             $this->assertNotEmpty($client->agent);
             $this->assertEquals($client->attributes_agent_id, $client->agent->id);
