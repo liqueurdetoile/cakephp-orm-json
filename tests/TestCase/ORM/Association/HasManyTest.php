@@ -136,6 +136,19 @@ class HasManyTest extends TestCase
         }
     }
 
+    public function testFinderContain(): void
+    {
+        $agents = $this->Agents->find()->contain('Specialclients')->toArray();
+
+        $this->assertNotEmpty($agents);
+
+        foreach ($agents as $agent) {
+            foreach ($agent->clients as $client) {
+                $this->assertEquals(2, $client->get('attributes->level'));
+            }
+        }
+    }
+
     public function testMatching(): void
     {
         $agents = $this->Agents->find()->matching('Clients', function ($q) {

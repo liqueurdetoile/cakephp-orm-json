@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Lqdt\OrmJson\Test\Model\Table;
 
+use Cake\ORM\Query;
 use Lqdt\OrmJson\Test\Model\Entity\Client;
 
 /**
@@ -30,5 +31,10 @@ class ClientsTable extends DatfieldBehaviorTable
           'foreignKey' => 'attributes->client_id',
           'dependent' => true,
         ]);
+    }
+
+    public function findSpecials(Query $q): Query
+    {
+        return $q->where(['attributes->level' => 2]);
     }
 }

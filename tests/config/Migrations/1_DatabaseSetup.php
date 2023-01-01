@@ -16,38 +16,38 @@ class DatabaseSetup extends AbstractMigration
     public function change()
     {
         $table = $this->table('objects', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->addColumn('at2', 'json', ['null' => true]);
         $table->create();
 
         $table = $this->table('agents', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
         $table = $this->table('clients', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
         $table = $this->table('contacts', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
         $table = $this->table('agents_clients', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('attributes', 'json', ['null' => true]);
         $table->create();
 
         $table = $this->table('drivers', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('name', 'string', ['null' => false]);
         $table->create();
 
         $table = $this->table('vehicles', ['id' => false, 'primary_key' => ['id']]);
-        $table->addColumn('id', 'uuid');
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('geocode_id', 'uuid', ['null' => false]);
         $table->create();
 
