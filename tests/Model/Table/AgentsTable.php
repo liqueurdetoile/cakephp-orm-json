@@ -26,5 +26,12 @@ class AgentsTable extends DatfieldBehaviorTable
           'className' => ClientsTable::class,
           'foreignKey' => 'attributes->agent_id',
         ]);
+
+        $this->datFieldHasMany('Specialclients', [
+          'className' => ClientsTable::class,
+          'foreignKey' => 'attributes->agent_id',
+          'propertyName' => 'clients',
+          'finder' => 'specials',
+        ]);
     }
 }
