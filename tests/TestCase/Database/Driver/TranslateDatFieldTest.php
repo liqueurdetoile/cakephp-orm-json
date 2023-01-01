@@ -46,7 +46,12 @@ class TranslateDatFieldTest extends TestCase
         ];
     }
 
-    /** @dataProvider translateDatFieldMysqlData */
+    /**
+     * @dataProvider translateDatFieldMysqlData
+     * @param string|array<string> $datfield Datfield
+     * @param bool $unquote Unquote
+     * @param string|array<string> $expected Expected result
+     */
     public function testTranslateDatFieldMysql($datfield, bool $unquote, $expected): void
     {
         /** @var \Lqdt\OrmJson\Database\DatFieldDriverInterface $driver */
