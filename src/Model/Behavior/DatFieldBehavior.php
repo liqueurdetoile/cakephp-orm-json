@@ -129,8 +129,8 @@ class DatFieldBehavior extends Behavior
     public function afterMarshal(
         EventInterface $event,
         EntityInterface $entity,
-        \ArrayObject $data,
-        \ArrayObject $options
+        ArrayObject $data,
+        ArrayObject $options
     ): void {
         if (!$this->_datFieldsEnabled) {
             return;
@@ -147,7 +147,7 @@ class DatFieldBehavior extends Behavior
      * @param \ArrayObject $options Options
      * @return \Cake\ORM\Query
      */
-    public function beforeFind(EventInterface $event, Query $query, \ArrayObject $options): Query
+    public function beforeFind(EventInterface $event, Query $query, ArrayObject $options): Query
     {
         if (!empty($options['jsonTypeMap'])) {
             $this->_setTransientJsonTypes($options['jsonTypeMap'] ?? null);
@@ -166,7 +166,7 @@ class DatFieldBehavior extends Behavior
      * @param \ArrayObject $options Options
      * @return void
      */
-    public function beforeSave(EventInterface $event, EntityInterface $entity, \ArrayObject $options): void
+    public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
         $this->_setTransientJsonTypes($options['jsonTypeMap'] ?? null);
     }
