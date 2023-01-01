@@ -19,6 +19,11 @@ class TranslateDatFieldTest extends TestCase
             "JSON_EXTRACT(data, '$.p')",
           ],
           [
+            ['data->p', 'data->p2'],
+            false,
+            ["JSON_EXTRACT(data, '$.p')", "JSON_EXTRACT(data, '$.p2')"],
+          ],
+          [
             'data->[*]',
             false,
             "JSON_EXTRACT(data, '$[*]')",
@@ -42,12 +47,19 @@ class TranslateDatFieldTest extends TestCase
     }
 
     /** @dataProvider translateDatFieldMysqlData */
-    public function testTranslateDatFieldMysql(string $datfield, bool $unquote, string $expected): void
+    public function testTranslateDatFieldMysql($datfield, bool $unquote, $expected): void
     {
         /** @var \Lqdt\OrmJson\Database\DatFieldDriverInterface $driver */
         $driver = $this->connection->getDriver();
         /** @var \Lqdt\OrmJson\Database\Expression\DatFieldExpression $result */
         $result = $driver->translateDatField($datfield, $unquote);
-        $this->assertEquals($expected, $result->sql(new ValueBinder()));
+        $this->assertEquals(
+            $expected,
+            is_array($result) ?
+              array_map(function ($e) {
+                  return $e->sql(new ValueBinder());
+              }, $result) :
+              $result->sql(new ValueBinder())
+        );
     }
 }
